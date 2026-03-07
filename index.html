@@ -837,6 +837,250 @@ footer{
 }
 .dash-start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(15,30,60,.3)}
 
+
+/* ══ MODE SELECT CARDS ══ */
+.mode-select-section { margin-top: 48px; }
+.mode-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 28px;
+}
+@media(max-width:640px){ .mode-cards { grid-template-columns: 1fr; } }
+
+.mode-card {
+  background: var(--white);
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  cursor: pointer;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: block;
+}
+.mode-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .25s;
+}
+.mode-card.daily::before {
+  background: radial-gradient(ellipse at top left, rgba(201,168,76,.08), transparent 60%);
+}
+.mode-card.practice::before {
+  background: radial-gradient(ellipse at top left, rgba(15,30,60,.05), transparent 60%);
+}
+.mode-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+.mode-card.daily:hover { border-color: var(--gold); }
+.mode-card.practice:hover { border-color: var(--navy); }
+.mode-card:hover::before { opacity: 1; }
+
+.mc-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 18px;
+}
+.mode-card.daily .mc-icon { background: linear-gradient(135deg, var(--gold-pale), #f0e8cc); }
+.mode-card.practice .mc-icon { background: linear-gradient(135deg, #e8edf7, #d8e0f0); }
+
+.mc-label {
+  font-size: .62rem; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.mode-card.daily .mc-label { color: var(--gold-dim); }
+.mode-card.practice .mc-label { color: var(--navy-soft); }
+
+.mc-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.55rem; font-weight: 700;
+  color: var(--navy); line-height: 1.1;
+  margin-bottom: 10px;
+}
+.mc-desc {
+  font-size: .82rem; color: var(--text-mid);
+  line-height: 1.6; margin-bottom: 20px;
+}
+.mc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.mc-tag {
+  font-size: .67rem; font-weight: 600; padding: 3px 10px;
+  border-radius: 20px;
+}
+.mode-card.daily .mc-tag { background: var(--gold-pale); color: var(--gold-dim); }
+.mode-card.practice .mc-tag { background: #eef1f9; color: var(--navy-soft); }
+
+.mc-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: .82rem; font-weight: 700; letter-spacing: .03em;
+  padding: 10px 20px; border-radius: 10px; border: none;
+  cursor: pointer; transition: all .2s;
+}
+.mode-card.daily .mc-cta {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  color: var(--navy);
+  box-shadow: 0 4px 16px rgba(201,168,76,.35);
+}
+.mode-card.practice .mc-cta {
+  background: linear-gradient(135deg, var(--navy), var(--navy-soft));
+  color: var(--gold-light);
+  box-shadow: 0 4px 16px rgba(15,30,60,.2);
+}
+.mode-card:hover .mc-cta { transform: translateX(4px); }
+.mc-badge {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--gold); color: var(--navy);
+  font-size: .6rem; font-weight: 800; padding: 3px 9px;
+  border-radius: 20px; letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* Practice config panel — collapsible */
+#practiceConfigPanel { display: none; }
+#practiceConfigPanel.visible { display: block; animation: fadeUp .4s ease both; }
+
+/* ══ WEAK AREAS PANEL ══ */
+#weakAreasPanel {
+  display: none;
+  position: fixed; inset: 0; z-index: 1001;
+  overflow-y: auto;
+  background: #f3f4f6;
+  font-family: 'DM Sans', sans-serif;
+}
+#weakAreasPanel.active { display: block; }
+
+.wa-header {
+  background: var(--navy);
+  padding: 20px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; overflow: hidden; flex-shrink: 0;
+}
+.wa-header::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(201,168,76,.04) 79px, rgba(201,168,76,.04) 80px),
+              repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(201,168,76,.04) 79px, rgba(201,168,76,.04) 80px);
+}
+.wa-header-left { position: relative; display: flex; align-items: center; gap: 14px; }
+.wa-header-right { position: relative; }
+.wa-back-btn {
+  background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.3);
+  color: #e8c97a; padding: 8px 20px; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: .8rem; font-weight: 600;
+  cursor: pointer; transition: all .2s; letter-spacing: .03em;
+}
+.wa-back-btn:hover { background: rgba(201,168,76,.28); }
+
+.wa-hero {
+  background: var(--navy);
+  padding: 48px 40px 56px;
+  position: relative; overflow: hidden;
+}
+.wa-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 10% 60%, rgba(201,168,76,.1) 0%, transparent 55%),
+              radial-gradient(ellipse 80% 60% at 50% 100%, rgba(15,30,60,1) 0%, transparent 70%);
+}
+.wa-hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(201,168,76,.05) 49px,rgba(201,168,76,.05) 50px),
+    repeating-linear-gradient(90deg,transparent,transparent 49px,rgba(201,168,76,.05) 49px,rgba(201,168,76,.05) 50px);
+}
+.wa-hero-inner { max-width: 1000px; margin: 0 auto; position: relative; }
+.wa-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.25);
+  border-radius: 20px; padding: 5px 14px 5px 10px; margin-bottom: 24px;
+}
+.wa-eyebrow span { font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+.wa-hero h2 {
+  font-family: 'Cormorant Garamond', serif;
+  color: #fff; font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700; line-height: 1.1; margin-bottom: 10px;
+}
+.wa-hero h2 em { color: var(--gold-light); font-style: italic; }
+.wa-score-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 28px; }
+.wa-score-pill {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 110px;
+}
+.wa-score-num { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 700; color: var(--gold-light); line-height: 1; }
+.wa-score-label { font-size: .67rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; }
+
+.wa-body { max-width: 1000px; margin: 0 auto; padding: 40px 40px 80px; }
+@media(max-width:640px){ .wa-body { padding: 28px 20px 60px; } }
+
+.wa-section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem; font-weight: 700; color: var(--navy);
+  margin-bottom: 6px;
+}
+.wa-section-sub { font-size: .82rem; color: var(--text-light); margin-bottom: 20px; line-height: 1.5; }
+
+/* Subtopic rows */
+.wa-topic-group { margin-bottom: 28px; }
+.wa-topic-group-title {
+  font-size: .68rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--gold-dim);
+  margin-bottom: 10px; padding-bottom: 6px;
+  border-bottom: 2px solid var(--gold-pale);
+}
+.wa-row {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 18px;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.wa-row:hover { border-color: var(--navy-soft); }
+.wa-row-rank {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; font-size: .72rem; font-weight: 700;
+}
+.wa-row-rank.red { background: #fdecea; color: #8b1a1a; }
+.wa-row-rank.amber { background: var(--gold-pale); color: var(--gold-dim); }
+.wa-row-rank.green { background: var(--green-bg); color: var(--green); }
+
+.wa-row-body { flex: 1; min-width: 0; }
+.wa-row-name { font-size: .88rem; font-weight: 600; color: var(--navy); margin-bottom: 3px; }
+.wa-row-sub { font-size: .73rem; color: var(--text-light); }
+.wa-row-bar-wrap {
+  width: 120px; flex-shrink: 0;
+  background: var(--border-soft); border-radius: 4px; height: 6px; overflow: hidden;
+}
+.wa-row-bar { height: 100%; border-radius: 4px; transition: width .6s ease; }
+.wa-row-pct {
+  font-family: 'DM Mono', monospace; font-size: .82rem; font-weight: 700;
+  flex-shrink: 0; min-width: 40px; text-align: right;
+}
+.wa-row-pct.red { color: #c0392b; }
+.wa-row-pct.amber { color: #c9700a; }
+.wa-row-pct.green { color: var(--green); }
+
+.wa-all-good {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 16px; padding: 48px 40px; text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.wa-all-good .icon { font-size: 2.5rem; margin-bottom: 12px; }
+.wa-all-good h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--navy); margin-bottom: 8px; }
+.wa-all-good p { font-size: .85rem; color: var(--text-light); line-height: 1.6; }
+
+.wa-finish-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; max-width: 320px; margin: 36px auto 0;
+  padding: 15px 28px;
+  background: linear-gradient(135deg, var(--navy), var(--navy-soft));
+  color: var(--gold-light); border: none; border-radius: 12px;
+  font-family: 'DM Sans', sans-serif; font-size: .95rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 20px rgba(15,30,60,.25);
+}
+.wa-finish-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(15,30,60,.35); }
+
 </style>
 
 <!-- ══ FIREBASE SDK ══ -->
@@ -1110,42 +1354,54 @@ footer{
 <!-- PRACTICE TAB -->
 <div id="tab-practice" class="tab-pane active main">
 
-  <!-- HOW IT WORKS -->
-  <section class="anim-3">
-    <div class="section-eyebrow"><div class="eyebrow-line"></div><span>Guide</span></div>
-    <h2 class="section-title">How It Works</h2>
-    <p class="section-sub">Everything you need to know to get the most out of your CFA practice sessions.</p>
-    <div class="how-list">
-      <div class="how-item">
-        <div class="how-step">1</div>
-        <div class="how-icon">🎯</div>
-        <div class="how-item-text"><strong>Choose your scope</strong><p>Pick a topic area, then a specific chapter to drill one reading — or select <em>All</em> within a topic to mix questions across it.</p></div>
+  <!-- ── MODE SELECT ── -->
+  <section class="mode-select-section anim-3">
+    <div class="section-eyebrow"><div class="eyebrow-line"></div><span>Get Started</span></div>
+    <h2 class="section-title">How do you want to study today?</h2>
+    <p class="section-sub">Take a quick daily challenge to benchmark yourself, or run a focused practice session by topic and chapter.</p>
+
+    <div class="mode-cards">
+
+      <!-- DAILY CHALLENGE CARD -->
+      <div class="mode-card daily anim-4" onclick="launchDailyChallenge()">
+        <div class="mc-badge">Daily</div>
+        <div class="mc-icon">🗓</div>
+        <div class="mc-label">Daily Challenge</div>
+        <h3 class="mc-title">Test Yourself<br>Today</h3>
+        <p class="mc-desc">50 randomly selected questions drawn from all 10,000 in the bank — spanning every topic, every difficulty. Finish and get a personalised weak-areas breakdown.</p>
+        <div class="mc-tags">
+          <span class="mc-tag">50 Questions</span>
+          <span class="mc-tag">All Topics</span>
+          <span class="mc-tag">Weak Area Review</span>
+          <span class="mc-tag">~75 min</span>
+        </div>
+        <button class="mc-cta" onclick="event.stopPropagation();launchDailyChallenge()">
+          Start Challenge →
+        </button>
       </div>
-      <div class="how-item">
-        <div class="how-step">2</div>
-        <div class="how-icon">🔀</div>
-        <div class="how-item-text"><strong>Optionally shuffle</strong><p>Toggle shuffle to randomise question order and break pattern recognition — closer to real exam conditions.</p></div>
+
+      <!-- PRACTICE CARD -->
+      <div class="mode-card practice anim-5" onclick="showPracticeConfig()">
+        <div class="mc-icon">📚</div>
+        <div class="mc-label">Practice Session</div>
+        <h3 class="mc-title">Focus on a<br>Chapter</h3>
+        <p class="mc-desc">Choose a specific topic area and chapter, set your preferences, and drill as many questions as you like at your own pace.</p>
+        <div class="mc-tags">
+          <span class="mc-tag">Topic + Chapter</span>
+          <span class="mc-tag">Shuffleable</span>
+          <span class="mc-tag">Your Pace</span>
+          <span class="mc-tag">Full Results</span>
+        </div>
+        <button class="mc-cta" onclick="event.stopPropagation();showPracticeConfig()">
+          Choose Chapter →
+        </button>
       </div>
-      <div class="how-item">
-        <div class="how-step">3</div>
-        <div class="how-icon">📝</div>
-        <div class="how-item-text"><strong>Answer, skip, or mark for review</strong><p>Select an answer and submit. Mark tricky questions to revisit. Navigate freely before finishing.</p></div>
-      </div>
-      <div class="how-item">
-        <div class="how-step">4</div>
-        <div class="how-icon">📊</div>
-        <div class="how-item-text"><strong>Get detailed results</strong><p>Full score breakdown by difficulty, chapter, and topic — plus explanations for every question after submission.</p></div>
-      </div>
-      <div class="how-item">
-        <div class="how-step">5</div>
-        <div class="how-icon">📖</div>
-        <div class="how-item-text"><strong>Return anytime</strong><p>Click Exit at any point to see your score, answers, and explanations for all questions attempted so far.</p></div>
-      </div>
+
     </div>
   </section>
 
-  <!-- CONFIGURE SESSION -->
-  <section class="start-section anim-4">
+  <!-- CONFIGURE SESSION (hidden until Practice is clicked) -->
+  <section class="start-section" id="practiceConfigPanel">
     <div class="section-eyebrow"><div class="eyebrow-line"></div><span>Begin</span></div>
     <h2 class="section-title">Configure Your Session</h2>
     <p class="section-sub">Select a topic, set your preferences, then launch your practice exam across any part of the CFA Level I curriculum.</p>
@@ -3594,6 +3850,55 @@ footer{
   <div id="app"></div>
 
 
+
+
+<!-- ════════════════════════════════
+     WEAK AREAS PANEL
+════════════════════════════════ -->
+<div id="weakAreasPanel">
+
+  <!-- Header -->
+  <div class="wa-header">
+    <div class="wa-header-left">
+      <div class="brand-badge" style="background:linear-gradient(135deg,#c9a84c,#a07c30);font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:700;color:#0f1e3c;">K²</div>
+      <div class="brand-text">
+        <h1 style="font-family:'Cormorant Garamond',serif;color:#fff;font-size:1.1rem;font-weight:600;">Daily Challenge Review</h1>
+        <p style="color:rgba(255,255,255,.4);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;margin-top:2px;">Weak Area Analysis</p>
+      </div>
+    </div>
+    <div class="wa-header-right">
+      <button class="wa-back-btn" onclick="closeWeakAreas()">← Back to Home</button>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="wa-hero">
+    <div class="wa-hero-grid"></div>
+    <div class="wa-hero-inner">
+      <div class="wa-eyebrow">
+        <div style="width:6px;height:6px;background:#c9a84c;border-radius:50%;animation:pulse 2s infinite"></div>
+        <span>Daily Challenge · Weak Area Analysis</span>
+      </div>
+      <h2>Your <em>Focus Areas</em><br>for Next Time</h2>
+      <div class="wa-score-row" id="waScoreRow">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="wa-body">
+    <div class="wa-section-title">Subtopics Needing Attention</div>
+    <p class="wa-section-sub">Ranked by error rate — the subtopics where you had the most wrong answers relative to questions attempted. Focus your revision here.</p>
+    <div id="waWeakList">
+      <!-- filled by JS -->
+    </div>
+    <button class="wa-finish-btn" onclick="closeWeakAreas()">
+      ✓ Done — Back to Home
+    </button>
+  </div>
+
+</div>
 </div>
 
 
@@ -3929,6 +4234,132 @@ window.goToHome = function() {
   reactMounted = false;
 };
 
+
+// ── Daily Challenge ──────────────────────────────────────
+function launchDailyChallenge() {
+  window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 50 };
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('examPanel').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  if (!reactMounted) {
+    mountReact();
+    reactMounted = true;
+  } else {
+    document.getElementById('app').innerHTML = '';
+    reactMounted = false;
+    setTimeout(() => { mountReact(); reactMounted = true; }, 50);
+  }
+}
+
+// ── Show/hide practice config ────────────────────────────
+function showPracticeConfig() {
+  var panel = document.getElementById('practiceConfigPanel');
+  if (!panel) return;
+  panel.classList.add('visible');
+  setTimeout(function() {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+}
+
+// ── Weak Areas panel ─────────────────────────────────────
+window.showWeakAreas = function(answers, questions) {
+  // Build subtopic analysis from wrong answers
+  var topicMap = {}; // key: "chapterName|topic", value: { chapter, topic, wrong, total }
+
+  questions.forEach(function(q) {
+    var key = (q.chapterName || q.chapter || 'Unknown') + '|||' + (q.topic || 'General');
+    if (!topicMap[key]) {
+      topicMap[key] = {
+        chapter: q.chapterName || ('Chapter ' + q.chapter),
+        topic: q.topic || 'General',
+        wrong: 0,
+        total: 0
+      };
+    }
+    var ans = answers[q.id];
+    if (ans) {
+      topicMap[key].total++;
+      if (ans.selected !== q.correctAnswer) topicMap[key].wrong++;
+    }
+  });
+
+  var rows = Object.values(topicMap)
+    .filter(function(r) { return r.total > 0; })
+    .map(function(r) { r.pct = Math.round(r.wrong / r.total * 100); return r; })
+    .sort(function(a, b) { return b.pct - a.pct || b.wrong - a.wrong; });
+
+  var totalAns = Object.keys(answers).length;
+  var totalCor = Object.values(answers).filter(function(a, idx) {
+    var q = questions.find(function(q) { return q.id === Object.keys(answers)[idx]; });
+    return q && a.selected === q.correctAnswer;
+  }).length;
+  // Recalculate properly
+  var correct = 0;
+  questions.forEach(function(q) {
+    if (answers[q.id] && answers[q.id].selected === q.correctAnswer) correct++;
+  });
+  var scorePct = totalAns > 0 ? Math.round(correct / questions.length * 100) : 0;
+
+  // Score row
+  var scoreRow = document.getElementById('waScoreRow');
+  scoreRow.innerHTML = [
+    { num: questions.length, label: 'Questions' },
+    { num: correct + '/' + totalAns, label: 'Correct / Answered' },
+    { num: scorePct + '%', label: 'Score' },
+    { num: rows.filter(function(r){ return r.pct >= 50; }).length, label: 'Weak Subtopics' }
+  ].map(function(s) {
+    return '<div class="wa-score-pill"><div class="wa-score-num">' + s.num + '</div><div class="wa-score-label">' + s.label + '</div></div>';
+  }).join('');
+
+  // Group by chapter
+  var byChapter = {};
+  rows.forEach(function(r) {
+    if (!byChapter[r.chapter]) byChapter[r.chapter] = [];
+    byChapter[r.chapter].push(r);
+  });
+
+  var weakRows = rows.filter(function(r) { return r.pct >= 40; });
+  var listEl = document.getElementById('waWeakList');
+
+  if (weakRows.length === 0) {
+    listEl.innerHTML = '<div class="wa-all-good"><div class="icon">🏆</div><h3>Strong Performance!</h3><p>You answered at least 60% correctly across all subtopics. Keep up the daily practice to maintain this standard.</p></div>';
+  } else {
+    var html = '';
+    Object.keys(byChapter).forEach(function(chName) {
+      var chRows = byChapter[chName];
+      var hasWeak = chRows.some(function(r){ return r.pct >= 40; });
+      if (!hasWeak) return;
+      html += '<div class="wa-topic-group"><div class="wa-topic-group-title">' + chName + '</div>';
+      chRows.filter(function(r){ return r.pct >= 40; }).forEach(function(r, i) {
+        var cls = r.pct >= 70 ? 'red' : r.pct >= 40 ? 'amber' : 'green';
+        var barColor = r.pct >= 70 ? '#c0392b' : r.pct >= 40 ? '#c9700a' : '#1a7a4a';
+        html += '<div class="wa-row">' +
+          '<div class="wa-row-rank ' + cls + '">' + (i + 1) + '</div>' +
+          '<div class="wa-row-body">' +
+            '<div class="wa-row-name">' + r.topic + '</div>' +
+            '<div class="wa-row-sub">' + r.wrong + ' wrong of ' + r.total + ' attempted</div>' +
+          '</div>' +
+          '<div class="wa-row-bar-wrap"><div class="wa-row-bar" style="width:' + r.pct + '%;background:' + barColor + '"></div></div>' +
+          '<div class="wa-row-pct ' + cls + '">' + r.pct + '%</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    });
+    listEl.innerHTML = html;
+  }
+
+  // Show panel
+  document.getElementById('examPanel').classList.remove('active');
+  document.getElementById('weakAreasPanel').classList.add('active');
+  document.getElementById('weakAreasPanel').scrollTop = 0;
+  document.body.style.overflow = 'auto';
+};
+
+window.closeWeakAreas = function() {
+  document.getElementById('weakAreasPanel').classList.remove('active');
+  window.goToHome();
+};
+
 buildTopicDropdown();
 document.getElementById('chapterDropdown').disabled = true;
 // Also build summaries topic dropdown
@@ -4213,7 +4644,8 @@ function FinanceExamApp() {
                           return;
                         }
 
-                        const active = config.shuffle ? shuffleArray(filtered) : filtered;
+                        let active = config.shuffle ? shuffleArray(filtered) : filtered;
+                        if (config.dailyLimit && config.dailyLimit > 0) active = active.slice(0, config.dailyLimit);
                         setQuestions(active);
                         setExamStarted(true);
                         setCurrentQuestionIndex(0);
@@ -4644,6 +5076,11 @@ if (examStarted && questions.length === 0) {
             // Results Screen
             if (showResults) {
                 const score = calculateScore();
+                // Expose for daily challenge weak areas
+                if (window.EXAM_CONFIG && window.EXAM_CONFIG.dailyChallenge) {
+                  window._dcAnswers   = answers;
+                  window._dcQuestions = questions;
+                }
                 const analysisByDifficulty = getAnalysisByDifficulty();
                 const analysisByChapter = getAnalysisByChapter();
                 const passed = parseFloat(score.percentage) >= 70;
@@ -4675,14 +5112,24 @@ if (examStarted && questions.length === 0) {
                                     <div style={{ color:'rgba(255,255,255,.4)', fontSize:'.66rem', letterSpacing:'.12em', textTransform:'uppercase', marginTop:2 }}>Results &amp; Analysis</div>
                                 </div>
                             </div>
+                            <div style={{ display:'flex', alignItems:'center', gap:8, position:'relative' }}>
                             <button
                                 onClick={() => window.goToHome && window.goToHome()}
-                                style={{ background:'rgba(201,168,76,.15)', border:'1px solid rgba(201,168,76,.3)', color:'#e8c97a', padding:'8px 20px', borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:600, cursor:'pointer', position:'relative', letterSpacing:'.03em', transition:'all .2s' }}
+                                style={{ background:'rgba(201,168,76,.15)', border:'1px solid rgba(201,168,76,.3)', color:'#e8c97a', padding:'8px 20px', borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:600, cursor:'pointer', letterSpacing:'.03em', transition:'all .2s' }}
                                 onMouseOver={e => e.currentTarget.style.background='rgba(201,168,76,.28)'}
                                 onMouseOut={e => e.currentTarget.style.background='rgba(201,168,76,.15)'}
                             >
                                 ← Home
                             </button>
+                            {window.EXAM_CONFIG && window.EXAM_CONFIG.dailyChallenge && (
+                              <button
+                                onClick={() => window.showWeakAreas && window.showWeakAreas(answers, questions)}
+                                style={{ background:'linear-gradient(135deg,#c9a84c,#a07c30)', border:'none', color:'#0f1e3c', padding:'8px 20px', borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:700, cursor:'pointer', letterSpacing:'.03em' }}
+                              >
+                                🔍 View Weak Areas →
+                              </button>
+                            )}
+                            </div>
                         </div>
 
                         {/* ── Hero score banner ── */}
