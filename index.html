@@ -545,8 +545,8 @@ footer{
 
 /* Exam specific styles from original */
 .eliminated { opacity: 0.35; text-decoration: line-through; }
-.gradient-bg { background: linear-gradient(135deg, #064E3B 0%, #10B981 100%); }
-.gradient-bg-2 { background: linear-gradient(135deg, #10B981 0%, #34D399 100%); }
+.gradient-bg { background: linear-gradient(135deg, #0f1e3c 0%, #243a6b 100%); }
+.gradient-bg-2 { background: linear-gradient(135deg, #1a2f5a 0%, #243a6b 100%); }
 .card-shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
 .option-card { transition: all 0.2s ease; }
 .option-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -4635,10 +4635,12 @@ const handleChapterSelection = (value) => {
                     );
                 }
                 return (
-                    <div className="min-h-screen gradient-bg flex items-center justify-center">
-                        <div className="text-white text-center">
-                            <div className="text-6xl mb-6">📚</div>
-                            <p className="text-xl font-medium opacity-75">Loading exam…</p>
+                    <div style={{ minHeight:'100vh', background:'#0f1e3c', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Sans',sans-serif" }}>
+                        <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(201,168,76,.04) 49px,rgba(201,168,76,.04) 50px),repeating-linear-gradient(90deg,transparent,transparent 49px,rgba(201,168,76,.04) 49px,rgba(201,168,76,.04) 50px)', pointerEvents:'none' }} />
+                        <div style={{ textAlign:'center', position:'relative' }}>
+                            <div style={{ width:72, height:72, background:'linear-gradient(135deg,#c9a84c,#a07c30)', borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Cormorant Garamond',serif", fontSize:'1.8rem', fontWeight:700, color:'#0f1e3c', margin:'0 auto 24px' }}>K²</div>
+                            <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.5rem', color:'#fff', fontWeight:600, marginBottom:8 }}>Preparing your session…</p>
+                            <p style={{ fontSize:'.8rem', color:'rgba(255,255,255,.35)', letterSpacing:'.08em', textTransform:'uppercase' }}>CFA Level I · K2 Intellect</p>
                         </div>
                     </div>
                 );
@@ -4776,25 +4778,26 @@ const handleChapterSelection = (value) => {
 // If exam has started but questions haven't loaded yet (or failed), show a friendly screen
 if (examStarted && questions.length === 0) {
     return (
-        <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl card-shadow p-10 max-w-xl w-full text-center">
-                <h2 className="text-3xl font-bold text-gray-800 mb-3">Loading questions…</h2>
-                <p className="text-gray-600 mb-6">Please wait.</p>
+        <div style={{ minHeight:'100vh', background:'#0f1e3c', display:'flex', alignItems:'center', justifyContent:'center', padding:24, fontFamily:"'DM Sans',sans-serif" }}>
+            <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(201,168,76,.04) 49px,rgba(201,168,76,.04) 50px),repeating-linear-gradient(90deg,transparent,transparent 49px,rgba(201,168,76,.04) 49px,rgba(201,168,76,.04) 50px)', pointerEvents:'none' }} />
+            <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(201,168,76,.2)', borderRadius:20, padding:'40px 36px', maxWidth:480, width:'100%', textAlign:'center', position:'relative', boxShadow:'0 24px 80px rgba(0,0,0,.4)' }}>
+                <div style={{ width:56, height:56, background:'linear-gradient(135deg,#c9a84c,#a07c30)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Cormorant Garamond',serif", fontSize:'1.3rem', fontWeight:700, color:'#0f1e3c', margin:'0 auto 20px' }}>K²</div>
+                <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.6rem', fontWeight:700, color:'#fff', marginBottom:8 }}>{loadError ? 'Unable to Load Questions' : 'Loading Questions…'}</h2>
+                <p style={{ fontSize:'.85rem', color:'rgba(255,255,255,.45)', marginBottom: loadError ? 20 : 0, lineHeight:1.6 }}>{loadError ? 'There was a problem loading the question bank.' : 'Please wait a moment.'}</p>
                 {loadError && (
-                    <div className="text-left bg-red-50 border-2 border-red-200 text-red-700 rounded-2xl p-5">
-                        <div className="font-bold mb-1">Error</div>
-                        <div className="text-sm">{loadError}</div>
+                    <div style={{ textAlign:'left', background:'rgba(192,57,43,.12)', border:'1px solid rgba(192,57,43,.3)', borderRadius:10, padding:'12px 16px', marginBottom:20 }}>
+                        <div style={{ fontWeight:700, color:'#f0bfbf', fontSize:'.8rem', marginBottom:4 }}>Error</div>
+                        <div style={{ fontSize:'.78rem', color:'rgba(255,255,255,.55)', lineHeight:1.5 }}>{loadError}</div>
                     </div>
                 )}
-                <button
-                    onClick={() => {
-                        setExamStarted(false);
-                        setIsLoadingQuestions(false);
-                    }}
-                    className="mt-6 gradient-bg text-white px-8 py-3 rounded-2xl font-bold hover:shadow-2xl transition-all"
-                >
-                    Back
-                </button>
+                {loadError && (
+                    <button
+                        onClick={() => { setExamStarted(false); setIsLoadingQuestions(false); }}
+                        style={{ background:'linear-gradient(135deg,#c9a84c,#a07c30)', border:'none', color:'#0f1e3c', padding:'11px 32px', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.88rem', fontWeight:700, cursor:'pointer', letterSpacing:'.02em' }}
+                    >
+                        ← Back to Home
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -4952,19 +4955,51 @@ if (examStarted && questions.length === 0) {
                                         </div>
                                     </div>
 
-                                    {/* Wrong subtopics */}
+                                    {/* Wrong subtopics — grouped by main topic */}
                                     {(() => {
-                                        const wrongBySubtopic = {};
+                                        // Build a chapter→mainTopic lookup from TOPICS_REF
+                                        const chapterToMainTopic = {};
+                                        const topicMeta = {}; // topicLabel → { icon, label }
+                                        if (window.TOPICS) {
+                                            window.TOPICS.forEach(t => {
+                                                topicMeta[t.label] = { icon: t.icon, label: t.label };
+                                                (t.chapters || []).forEach(ch => {
+                                                    chapterToMainTopic[ch.label] = t.label;
+                                                    chapterToMainTopic[ch.id]    = t.label;
+                                                });
+                                            });
+                                        }
+
+                                        // Collect per-subtopic wrong counts, also track totals per main topic
+                                        const mainTopicStats = {}; // mainTopic → { totalAttempted, totalWrong, subtopics:{} }
                                         questions.forEach(q => {
                                             const ans = answers[q.id];
-                                            if (ans && ans.selected !== q.correctAnswer) {
-                                                const key = (q.chapterName || ('Ch ' + q.chapter)) + '|||' + (q.topic || 'General');
-                                                if (!wrongBySubtopic[key]) wrongBySubtopic[key] = { chapter: q.chapterName || ('Ch ' + q.chapter), topic: q.topic || 'General', count: 0 };
-                                                wrongBySubtopic[key].count++;
+                                            if (!ans) return;
+                                            const chName  = q.chapterName || ('Ch ' + q.chapter);
+                                            const mainTopic = chapterToMainTopic[chName] || chapterToMainTopic[q.chapter] || chName;
+                                            const subtopic  = q.topic || 'General';
+                                            if (!mainTopicStats[mainTopic]) mainTopicStats[mainTopic] = { totalAttempted: 0, totalWrong: 0, subtopics: {} };
+                                            mainTopicStats[mainTopic].totalAttempted++;
+                                            if (ans.selected !== q.correctAnswer) {
+                                                mainTopicStats[mainTopic].totalWrong++;
+                                                const st = mainTopicStats[mainTopic].subtopics;
+                                                if (!st[subtopic]) st[subtopic] = { wrong: 0, total: 0 };
+                                                st[subtopic].wrong++;
                                             }
+                                            // count subtopic attempts regardless
+                                            const st = mainTopicStats[mainTopic].subtopics;
+                                            if (!st[subtopic]) st[subtopic] = { wrong: 0, total: 0 };
+                                            st[subtopic].total++;
                                         });
-                                        const wrongRows = Object.values(wrongBySubtopic).sort((a,b) => b.count - a.count);
-                                        if (wrongRows.length === 0) return (
+
+                                        // Filter to main topics that have at least 1 wrong answer
+                                        const topicsWithErrors = Object.entries(mainTopicStats)
+                                            .filter(([, d]) => d.totalWrong > 0)
+                                            .sort((a, b) => b[1].totalWrong - a[1].totalWrong);
+
+                                        const totalWrongAll = topicsWithErrors.reduce((s, [,d]) => s + d.totalWrong, 0);
+
+                                        if (topicsWithErrors.length === 0) return (
                                             <div style={{ background:'#fff', border:'1px solid #ddd8cc', borderRadius:16, overflow:'hidden', boxShadow:'0 2px 12px rgba(15,30,60,.07)' }}>
                                                 <div style={{ background:'#0f1e3c', padding:'14px 22px' }}>
                                                     <span style={{ fontSize:'.65rem', fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'#e8c97a' }}>Wrong Answers by Subtopic</span>
@@ -4976,23 +5011,68 @@ if (examStarted && questions.length === 0) {
                                                 </div>
                                             </div>
                                         );
+
                                         return (
                                             <div style={{ background:'#fff', border:'1px solid #ddd8cc', borderRadius:16, overflow:'hidden', boxShadow:'0 2px 12px rgba(15,30,60,.07)' }}>
+                                                {/* Header */}
                                                 <div style={{ background:'#0f1e3c', padding:'14px 22px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                                                     <span style={{ fontSize:'.65rem', fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'#e8c97a' }}>Wrong Answers by Subtopic</span>
-                                                    <span style={{ fontSize:'.65rem', color:'rgba(255,255,255,.35)' }}>{wrongRows.length} subtopic{wrongRows.length > 1 ? 's' : ''}</span>
+                                                    <span style={{ fontSize:'.65rem', color:'rgba(255,255,255,.35)' }}>{totalWrongAll} wrong across {topicsWithErrors.length} topic{topicsWithErrors.length > 1 ? 's' : ''}</span>
                                                 </div>
-                                                <div style={{ padding:'16px 22px', display:'flex', flexDirection:'column', gap:8 }}>
-                                                    {wrongRows.map((r, i) => (
-                                                        <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', background: i === 0 ? '#fdecea' : i === 1 ? '#fff8ee' : '#faf8f3', border:`1px solid ${i === 0 ? '#f0bfbf' : '#eceae4'}`, borderRadius:10 }}>
-                                                            <div style={{ width:26, height:26, borderRadius:'50%', background: i === 0 ? '#c0392b' : i === 1 ? '#c9700a' : '#a07c30', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Mono',monospace", fontSize:'.68rem', fontWeight:700, flexShrink:0 }}>{i+1}</div>
-                                                            <div style={{ flex:1, minWidth:0 }}>
-                                                                <div style={{ fontSize:'.84rem', fontWeight:600, color:'#0f1e3c', marginBottom:2 }}>{r.topic}</div>
-                                                                <div style={{ fontSize:'.71rem', color:'#7a7a9a' }}>{r.chapter}</div>
+
+                                                {/* Main topic groups */}
+                                                <div style={{ padding:'6px 0' }}>
+                                                    {topicsWithErrors.map(([mainTopic, data], topicIdx) => {
+                                                        const meta = topicMeta[mainTopic] || {};
+                                                        const topicPct = Math.round(data.totalWrong / data.totalAttempted * 100);
+                                                        const subtopicRows = Object.entries(data.subtopics)
+                                                            .filter(([, s]) => s.wrong > 0)
+                                                            .sort((a, b) => b[1].wrong - a[1].wrong);
+
+                                                        return (
+                                                            <div key={mainTopic} style={{ borderBottom: topicIdx < topicsWithErrors.length - 1 ? '1px solid #eceae4' : 'none' }}>
+                                                                {/* Topic header row */}
+                                                                <div style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 22px', background:'#faf8f3' }}>
+                                                                    {meta.icon && <span style={{ fontSize:'1.1rem', flexShrink:0 }}>{meta.icon}</span>}
+                                                                    <div style={{ flex:1, minWidth:0 }}>
+                                                                        <div style={{ fontSize:'.88rem', fontWeight:700, color:'#0f1e3c' }}>{mainTopic}</div>
+                                                                        <div style={{ fontSize:'.7rem', color:'#7a7a9a', marginTop:2 }}>
+                                                                            {data.totalWrong} wrong of {data.totalAttempted} attempted
+                                                                        </div>
+                                                                    </div>
+                                                                    {/* Topic-level error bar */}
+                                                                    <div style={{ width:90, flexShrink:0 }}>
+                                                                        <div style={{ background:'#eceae4', borderRadius:3, height:5, overflow:'hidden' }}>
+                                                                            <div style={{ height:'100%', width:`${topicPct}%`, background: topicPct >= 60 ? '#c0392b' : topicPct >= 35 ? '#c9700a' : '#a07c30', borderRadius:3, transition:'width .6s ease' }} />
+                                                                        </div>
+                                                                        <div style={{ fontSize:'.65rem', color: topicPct >= 60 ? '#c0392b' : topicPct >= 35 ? '#c9700a' : '#a07c30', fontWeight:700, fontFamily:"'DM Mono',monospace", textAlign:'right', marginTop:3 }}>{topicPct}% error rate</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Subtopic rows */}
+                                                                <div style={{ padding:'4px 22px 12px 22px', display:'flex', flexDirection:'column', gap:6 }}>
+                                                                    {subtopicRows.map(([subtopic, st], i) => {
+                                                                        const stPct = Math.round(st.wrong / st.total * 100);
+                                                                        const isTop = i === 0;
+                                                                        return (
+                                                                            <div key={subtopic} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', background: isTop ? '#fdecea' : '#fff', border:`1px solid ${isTop ? '#f0bfbf' : '#eceae4'}`, borderLeft:`3px solid ${stPct >= 60 ? '#c0392b' : stPct >= 35 ? '#c9700a' : '#a07c30'}`, borderRadius:'0 8px 8px 0' }}>
+                                                                                <div style={{ flex:1, minWidth:0 }}>
+                                                                                    <div style={{ fontSize:'.81rem', fontWeight:600, color:'#1a1a2e' }}>{subtopic}</div>
+                                                                                    <div style={{ fontSize:'.68rem', color:'#7a7a9a', marginTop:1 }}>{st.wrong} wrong of {st.total} attempted</div>
+                                                                                </div>
+                                                                                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                                                                                    <div style={{ width:70, background:'#eceae4', borderRadius:3, height:4, overflow:'hidden' }}>
+                                                                                        <div style={{ height:'100%', width:`${stPct}%`, background: stPct >= 60 ? '#c0392b' : stPct >= 35 ? '#c9700a' : '#a07c30', borderRadius:3 }} />
+                                                                                    </div>
+                                                                                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:'.75rem', fontWeight:700, color: stPct >= 60 ? '#c0392b' : stPct >= 35 ? '#c9700a' : '#7a5a10', minWidth:36, textAlign:'right' }}>{stPct}%</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             </div>
-                                                            <div style={{ fontFamily:"'DM Mono',monospace", fontSize:'.82rem', fontWeight:700, color: i === 0 ? '#c0392b' : i === 1 ? '#c9700a' : '#a07c30', flexShrink:0 }}>{r.count} wrong</div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         );
@@ -5122,190 +5202,211 @@ if (examStarted && questions.length === 0) {
                 );
             }
 
-            // Exam Screen
+            // Exam Screen — navy/gold theme
+            const diffBadge = {
+                Easy:     { bg:'#e8f7ef', color:'#1a5c3a' },
+                Moderate: { bg:'#f7f0dc', color:'#7a5a10' },
+                Difficult:{ bg:'#fdecea', color:'#8b1a1a' },
+            };
+            const db = diffBadge[currentQuestion.difficulty] || diffBadge.Moderate;
+
             return (
-                <div className="min-h-screen bg-gray-100">
-                    {/* Header */}
-                    <div className="bg-white shadow-md">
-                        <div className="max-w-7xl mx-auto px-6 py-5">
-                            <div className="flex items-center justify-between">
+                <div style={{ minHeight:'100vh', background:'#f3f4f6', fontFamily:"'DM Sans',sans-serif" }}>
+
+                    {/* ── Sticky header ── */}
+                    <div style={{ background:'#0f1e3c', position:'sticky', top:0, zIndex:100, boxShadow:'0 4px 24px rgba(15,30,60,.3)' }}>
+                        {/* grid overlay */}
+                        <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(90deg,transparent,transparent 79px,rgba(201,168,76,.04) 79px,rgba(201,168,76,.04) 80px),repeating-linear-gradient(0deg,transparent,transparent 79px,rgba(201,168,76,.04) 79px,rgba(201,168,76,.04) 80px)', pointerEvents:'none' }} />
+
+                        {/* Top bar: brand + stats + exit */}
+                        <div style={{ maxWidth:900, margin:'0 auto', padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative', gap:16 }}>
+                            {/* Brand */}
+                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                <div style={{ width:36, height:36, background:'linear-gradient(135deg,#c9a84c,#a07c30)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Cormorant Garamond',serif", fontSize:'1rem', fontWeight:700, color:'#0f1e3c', flexShrink:0 }}>K²</div>
                                 <div>
-                                    <h1 className="text-2xl font-bold text-gray-800">Practice Session</h1>
-                                    <p className="text-sm text-gray-600"> </p>
-                                </div>
-                                <div className="flex items-center space-x-8">
-                                    <div className="text-center">
-                                        <p className="text-xs text-gray-500 font-medium">TIME</p>
-                                        <p className="text-2xl font-bold text-emerald-600 font-mono">{formatTime(timeElapsed)}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-xs text-gray-500 font-medium">PROGRESS</p>
-                                        <p className="text-2xl font-bold text-emerald-600">{answeredCount}/{totalQuestions}</p>
-                                    </div>
+                                    <div style={{ fontFamily:"'Cormorant Garamond',serif", color:'#fff', fontSize:'.95rem', fontWeight:600, lineHeight:1.1 }}>{window.EXAM_CONFIG && window.EXAM_CONFIG.dailyChallenge ? 'Daily Challenge' : 'Practice Session'}</div>
+                                    <div style={{ color:'rgba(255,255,255,.35)', fontSize:'.6rem', letterSpacing:'.12em', textTransform:'uppercase', marginTop:1 }}>CFA Level I</div>
                                 </div>
                             </div>
+
+                            {/* Stats row */}
+                            <div style={{ display:'flex', alignItems:'center', gap:20 }}>
+                                <div style={{ textAlign:'center' }}>
+                                    <div style={{ fontSize:'.58rem', fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.35)' }}>Time</div>
+                                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:'1.1rem', fontWeight:700, color:'#e8c97a', lineHeight:1 }}>{formatTime(timeElapsed)}</div>
+                                </div>
+                                <div style={{ width:1, height:28, background:'rgba(255,255,255,.1)' }} />
+                                <div style={{ textAlign:'center' }}>
+                                    <div style={{ fontSize:'.58rem', fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.35)' }}>Answered</div>
+                                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:'1.1rem', fontWeight:700, color:'#e8c97a', lineHeight:1 }}>{answeredCount}<span style={{ color:'rgba(255,255,255,.3)', fontSize:'.8rem' }}>/{totalQuestions}</span></div>
+                                </div>
+                                <div style={{ width:1, height:28, background:'rgba(255,255,255,.1)' }} />
+                                <div style={{ textAlign:'center' }}>
+                                    <div style={{ fontSize:'.58rem', fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.35)' }}>Question</div>
+                                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:'1.1rem', fontWeight:700, color:'#fff', lineHeight:1 }}>{currentQuestionIndex + 1}<span style={{ color:'rgba(255,255,255,.3)', fontSize:'.8rem' }}>/{totalQuestions}</span></div>
+                                </div>
+                            </div>
+
+                            {/* Controls */}
+                            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                {/* Mark for review toggle */}
+                                <button
+                                    onClick={toggleRevisit}
+                                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, border:`1px solid ${markedForReview.has(currentQuestion.id) ? 'rgba(201,168,76,.6)' : 'rgba(255,255,255,.15)'}`, background: markedForReview.has(currentQuestion.id) ? 'rgba(201,168,76,.18)' : 'rgba(255,255,255,.06)', color: markedForReview.has(currentQuestion.id) ? '#e8c97a' : 'rgba(255,255,255,.5)', fontFamily:"'DM Sans',sans-serif", fontSize:'.74rem', fontWeight:600, cursor:'pointer', transition:'all .18s' }}
+                                >
+                                    🔖 {markedForReview.has(currentQuestion.id) ? 'Flagged' : 'Flag'}
+                                </button>
+                                {markedCount > 0 && (
+                                    <button onClick={goToNextMarked} style={{ padding:'7px 12px', borderRadius:8, border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.55)', fontFamily:"'DM Sans',sans-serif", fontSize:'.74rem', fontWeight:600, cursor:'pointer' }}>
+                                        Next 🔖 ({markedCount})
+                                    </button>
+                                )}
+                                <button
+                                    onClick={exitExam}
+                                    style={{ padding:'7px 18px', borderRadius:8, border:'1px solid rgba(201,168,76,.3)', background:'rgba(201,168,76,.12)', color:'#e8c97a', fontFamily:"'DM Sans',sans-serif", fontSize:'.78rem', fontWeight:700, cursor:'pointer', letterSpacing:'.03em' }}
+                                >
+                                    Submit & Exit
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Gold progress bar */}
+                        <div style={{ height:3, background:'rgba(255,255,255,.08)' }}>
+                            <div style={{ height:'100%', width:`${progress}%`, background:'linear-gradient(90deg,#c9a84c,#e8c97a)', transition:'width .3s ease' }} />
                         </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="bg-white shadow-sm">
-                        <div className="max-w-7xl mx-auto px-6 py-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-3">
-                                    <button
-                                        onClick={handlePrevious}
-                                        disabled={currentQuestionIndex === 0}
-                                        className={`p-2 rounded-lg transition-all ${
-                                            currentQuestionIndex === 0 
-                                                ? 'text-gray-300 cursor-not-allowed' 
-                                                : 'text-emerald-600 hover:bg-emerald-50'
-                                        }`}
-                                    >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                        </svg>
-                                    </button>
-                                    
-                                    <span className="text-lg font-bold text-gray-800">
-                                        Question {currentQuestionIndex + 1} of {totalQuestions}
-                                    </span>
-                                    
-                                    <button
-                                        onClick={handleNext}
-                                        disabled={currentQuestionIndex === totalQuestions - 1}
-                                        className={`p-2 rounded-lg transition-all ${
-                                            currentQuestionIndex === totalQuestions - 1 
-                                                ? 'text-gray-300 cursor-not-allowed' 
-                                                : 'text-emerald-600 hover:bg-emerald-50'
-                                        }`}
-                                    >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                
-                                <div className="flex items-center space-x-4">
-                                    <label className="flex items-center cursor-pointer text-gray-700 hover:text-emerald-600 font-medium">
-                                        <input 
-                                            type="checkbox"
-                                            checked={markedForReview.has(currentQuestion.id)}
-                                            onChange={toggleRevisit}
-                                            className="mr-2 w-5 h-5 text-emerald-600 rounded"
-                                        />
-                                        Mark for Review
-                                    </label>
+                    {/* ── Question card ── */}
+                    <div style={{ maxWidth:860, margin:'0 auto', padding:'32px 24px 80px' }}>
 
-                                    <span className="text-sm text-gray-600 mr-3">Marked: <span className="font-semibold text-gray-900">{markedCount}</span></span>
+                        {/* Nav row */}
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+                            <button
+                                onClick={handlePrevious}
+                                disabled={currentQuestionIndex === 0}
+                                style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, border:'1px solid #ddd8cc', background:'#fff', color: currentQuestionIndex === 0 ? '#c0bab0' : '#0f1e3c', fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:600, cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer', transition:'all .15s', boxShadow:'0 1px 4px rgba(15,30,60,.06)' }}
+                            >
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+                                Previous
+                            </button>
 
-                                    <button
-                                        onClick={goToNextMarked}
-                                        disabled={markedCount === 0}
-                                        className={`px-4 py-2 rounded-xl font-bold transition-all ${markedCount === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:shadow-lg'}`}
-                                    >
-                                        Next Marked
-                                    </button>
-
-                                    <button
-                                        onClick={clearAllMarked}
-                                        disabled={markedCount === 0}
-                                        className={`px-4 py-2 rounded-xl font-bold transition-all ${markedCount === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-                                    >
-                                        Clear Marks
-                                    </button>
-
-                                    <button
-                                        onClick={exitExam}
-                                        className="px-6 py-2 bg-gray-200 text-gray-800 rounded-xl font-bold hover:bg-gray-300 transition-all"
-                                    >
-                                        Exit
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                                <div 
-                                    className="gradient-bg h-full transition-all duration-300"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Question Content */}
-                    <div className="max-w-7xl mx-auto p-6">
-                        <div className="bg-white rounded-3xl card-shadow p-10">
-                            {/* Question Header */}
-                            <div className="mb-8">
-                                <div className="flex items-center justify-between mb-5">
-                                    <span className="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-xl text-sm font-bold">
-                                        {currentQuestion.topic}
-                                    </span>
-                                    <span className={`px-4 py-2 rounded-xl text-sm font-bold ${
-                                        currentQuestion.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
-                                        currentQuestion.difficulty === 'Moderate' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-red-100 text-red-800'
-                                    }`}>
-                                        {currentQuestion.difficulty}
-                                    </span>
-                                </div>
-                                <h2 className="text-2xl font-bold text-gray-800 leading-relaxed">
-                                    {currentQuestion.question}
-                                </h2>
-                            </div>
-
-                            {/* Answer Options */}
-                            <div className="space-y-4 mb-10">
-                                {currentQuestion.options.map((option, idx) => {
-                                    const optionLetter = String.fromCharCode(65 + idx);
-                                    const isSelected = selectedAnswer === optionLetter;
-                                    const isEliminated = eliminatedOptions[`${currentQuestion.id}-${optionLetter}`];
-                                    
+                            {/* Question counter pills */}
+                            <div style={{ display:'flex', alignItems:'center', gap:4, flexWrap:'wrap', justifyContent:'center', maxWidth:400, flex:1, margin:'0 12px' }}>
+                                {questions.slice(0, Math.min(questions.length, 50)).map((q, i) => {
+                                    const isAnswered = !!answers[q.id];
+                                    const isCurrent  = i === currentQuestionIndex;
+                                    const isFlagged  = markedForReview.has(q.id);
                                     return (
-                                        <div 
-                                            key={idx}
-                                            className={`option-card flex items-center border-3 rounded-2xl p-5 cursor-pointer ${
-                                                isEliminated ? 'eliminated border-gray-200' : 
-                                                isSelected ? 'border-purple-500 bg-emerald-50 shadow-lg' : 'border-gray-300 hover:border-purple-400'
-                                            }`}
-                                            onClick={() => !isEliminated && handleAnswerSelect(optionLetter)}
-                                        >
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg mr-5 ${
-                                                isSelected ? 'gradient-bg text-white' : 'bg-gray-200 text-gray-700'
-                                            }`}>
-                                                {optionLetter}
-                                            </div>
-                                            <span className={`flex-1 text-lg ${isEliminated ? 'line-through text-gray-400' : 'text-gray-800 font-medium'}`}>
-                                                {option}
-                                            </span>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleEliminate(currentQuestion.id, optionLetter);
-                                                }}
-                                                className={`ml-4 ${isEliminated ? 'text-gray-400' : 'text-gray-400 hover:text-red-500'} transition-colors`}
-                                            >
-                                                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                        <div key={i} onClick={() => { setCurrentQuestionIndex(i); setSelectedAnswer(answers[questions[i].id]?.selected || ''); }}
+                                            style={{ width:20, height:20, borderRadius:4, cursor:'pointer', fontSize:'.55rem', fontWeight:700, fontFamily:"'DM Mono',monospace", display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .12s',
+                                                background: isCurrent ? '#0f1e3c' : isFlagged ? '#f7f0dc' : isAnswered ? '#e8f7ef' : '#fff',
+                                                color: isCurrent ? '#e8c97a' : isFlagged ? '#a07c30' : isAnswered ? '#1a5c3a' : '#9a9aaa',
+                                                border: isCurrent ? '2px solid #c9a84c' : isFlagged ? '1px solid #c9a84c' : isAnswered ? '1px solid #b6dfc8' : '1px solid #ddd8cc',
+                                                boxShadow: isCurrent ? '0 2px 8px rgba(201,168,76,.3)' : 'none'
+                                            }}
+                                        >{i+1}</div>
                                     );
                                 })}
+                                {questions.length > 50 && <span style={{ fontSize:'.65rem', color:'#9a9aaa' }}>+{questions.length - 50}</span>}
                             </div>
 
-                            {/* Submit Button */}
                             <button
-                                onClick={handleConfirm}
-                                disabled={!selectedAnswer}
-                                className={`w-full py-5 rounded-2xl font-bold text-lg transition-all ${
-                                    selectedAnswer
-                                        ? 'gradient-bg text-white hover:shadow-2xl transform hover:scale-[1.02]'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+                                onClick={handleNext}
+                                disabled={currentQuestionIndex === totalQuestions - 1}
+                                style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:8, border:'1px solid #ddd8cc', background:'#fff', color: currentQuestionIndex === totalQuestions - 1 ? '#c0bab0' : '#0f1e3c', fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:600, cursor: currentQuestionIndex === totalQuestions - 1 ? 'not-allowed' : 'pointer', transition:'all .15s', boxShadow:'0 1px 4px rgba(15,30,60,.06)' }}
                             >
-                                {currentQuestionIndex < totalQuestions - 1 ? 'Submit Answer' : 'Submit Final Answer'}
+                                Next
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
                             </button>
+                        </div>
+
+                        {/* Main card */}
+                        <div style={{ background:'#fff', border:'1px solid #ddd8cc', borderRadius:20, boxShadow:'0 4px 24px rgba(15,30,60,.09)', overflow:'hidden' }}>
+
+                            {/* Card header: chapter + topic + difficulty */}
+                            <div style={{ background:'linear-gradient(135deg,#0f1e3c,#1a2f5a)', padding:'16px 28px', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:'.65rem', fontWeight:600, color:'#c9a84c', background:'rgba(201,168,76,.15)', padding:'3px 9px', borderRadius:4 }}>
+                                    {currentQuestion.chapterName || ('Ch ' + currentQuestion.chapter)}
+                                </span>
+                                <span style={{ fontSize:'.72rem', color:'rgba(255,255,255,.5)', flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                    {currentQuestion.topic}
+                                </span>
+                                <span style={{ fontSize:'.68rem', fontWeight:700, padding:'3px 10px', borderRadius:4, background:db.bg, color:db.color, flexShrink:0 }}>
+                                    {currentQuestion.difficulty}
+                                </span>
+                            </div>
+
+                            {/* Question body */}
+                            <div style={{ padding:'28px 28px 24px' }}>
+                                <p style={{ fontFamily:"'DM Sans',sans-serif", fontSize:'1rem', fontWeight:600, color:'#1a1a2e', lineHeight:1.65, marginBottom:28 }}>
+                                    {currentQuestion.question}
+                                </p>
+
+                                {/* Options */}
+                                <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
+                                    {currentQuestion.options.map((option, idx) => {
+                                        const letter = String.fromCharCode(65 + idx);
+                                        const isSelected   = selectedAnswer === letter;
+                                        const isEliminated = eliminatedOptions[`${currentQuestion.id}-${letter}`];
+                                        return (
+                                            <div
+                                                key={idx}
+                                                onClick={() => !isEliminated && handleAnswerSelect(letter)}
+                                                style={{
+                                                    display:'flex', alignItems:'center', gap:14,
+                                                    padding:'14px 18px', borderRadius:12, cursor: isEliminated ? 'default' : 'pointer',
+                                                    border: isSelected ? '2px solid #0f1e3c' : isEliminated ? '1px solid #eceae4' : '1px solid #ddd8cc',
+                                                    background: isSelected ? 'linear-gradient(135deg,#0f1e3c,#1a2f5a)' : isEliminated ? '#faf8f3' : '#fff',
+                                                    boxShadow: isSelected ? '0 4px 16px rgba(15,30,60,.2)' : '0 1px 4px rgba(15,30,60,.05)',
+                                                    transition:'all .18s', opacity: isEliminated ? .45 : 1,
+                                                }}
+                                            >
+                                                {/* Letter badge */}
+                                                <div style={{
+                                                    width:36, height:36, borderRadius:8, flexShrink:0,
+                                                    display:'flex', alignItems:'center', justifyContent:'center',
+                                                    fontFamily:"'DM Mono',monospace", fontSize:'.88rem', fontWeight:700,
+                                                    background: isSelected ? 'rgba(201,168,76,.25)' : '#f0ede8',
+                                                    color: isSelected ? '#e8c97a' : '#5a5a7a',
+                                                }}>
+                                                    {letter}
+                                                </div>
+                                                {/* Option text */}
+                                                <span style={{ flex:1, fontSize:'.9rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? '#fff' : isEliminated ? '#a0a0b0' : '#1a1a2e', lineHeight:1.5, textDecoration: isEliminated ? 'line-through' : 'none' }}>
+                                                    {option}
+                                                </span>
+                                                {/* Eliminate button */}
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); toggleEliminate(currentQuestion.id, letter); }}
+                                                    title={isEliminated ? 'Restore option' : 'Eliminate option'}
+                                                    style={{ background:'none', border:'none', cursor:'pointer', padding:4, borderRadius:4, color: isEliminated ? '#c9a84c' : isSelected ? 'rgba(255,255,255,.3)' : '#c0bab0', flexShrink:0, lineHeight:0 }}
+                                                >
+                                                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Submit */}
+                                <button
+                                    onClick={handleConfirm}
+                                    disabled={!selectedAnswer}
+                                    style={{
+                                        width:'100%', padding:'15px', borderRadius:12, border:'none',
+                                        fontFamily:"'DM Sans',sans-serif", fontSize:'.95rem', fontWeight:700,
+                                        letterSpacing:'.02em', cursor: selectedAnswer ? 'pointer' : 'not-allowed',
+                                        background: selectedAnswer ? 'linear-gradient(135deg,#0f1e3c,#243a6b)' : '#eceae4',
+                                        color: selectedAnswer ? '#e8c97a' : '#a0a0b8',
+                                        boxShadow: selectedAnswer ? '0 4px 20px rgba(15,30,60,.25)' : 'none',
+                                        transition:'all .2s',
+                                    }}
+                                >
+                                    {currentQuestionIndex < totalQuestions - 1 ? 'Submit Answer →' : '✓ Submit Final Answer'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
