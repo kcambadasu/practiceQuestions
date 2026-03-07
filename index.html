@@ -3857,6 +3857,7 @@ function totalAvailableQuestions() {
 }
 
 // Expose to React app
+window.TOPICS = TOPICS;
 window.TOPICS_REF = Object.fromEntries(TOPICS.map(t => [t.id, t.chapters]));
 // Map chapter UI ids → chapter field values used in questions.js
 window.CHAPTER_ID_MAP = {
@@ -3865,6 +3866,9 @@ window.CHAPTER_ID_MAP = {
   'qm-1':'QM-1','qm-2':'QM-2','qm-3':'QM-3','qm-4':'QM-4','qm-5':'QM-5',
   'qm-6':'QM-6','qm-7':'QM-7','qm-8':'QM-8','qm-9':'QM-9','qm-10':'QM-10','qm-11':'QM-11',
   'fi-1':'FI-R1','fi-2':'FI-R2','fi-3':'FI-R3','fi-4':'FI-R4',
+  'fi-5':'FI-R5','fi-6':'FI-R6','fi-7':'FI-R7',
+  'fi-11':'FI-R8','fi-13':'FI-R9','fi-14':'FI-R10',
+  'fi-15':'FI-R11','fi-16':'FI-R12','fi-17':'FI-R13','fi-18':'FI-R14','fi-19':'FI-R15',
 };
 
 
@@ -4139,12 +4143,12 @@ window.showWeakAreas = function(answers, questions) {
       out += '<div style="display:flex;align-items:center;gap:10px;">';
       if (d.icon) out += '<span style="font-size:1.3rem;">' + d.icon + '</span>';
       out += '<div>';
-      out += '<div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:700;color:#fff;line-height:1.1;">' + mainTopic + '</div>';
+      out += `<div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:700;color:#fff;line-height:1.1;">` + mainTopic + `</div>`;
       out += '<div style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px;letter-spacing:.04em;">' + d.totalWrong + ' wrong &nbsp;·&nbsp; ' + d.totalAttempted + ' attempted</div>';
       out += '</div></div>';
       // Right: error rate badge + bar
       out += '<div style="text-align:right;flex-shrink:0;">';
-      out += '<div style="font-family:'DM Mono',monospace;font-size:1.4rem;font-weight:700;color:' + topicClr + ';background:' + topicBg + ';padding:4px 14px;border-radius:8px;display:inline-block;line-height:1.2;">' + topicPct + '% <span style="font-size:.65rem;font-weight:600;color:' + topicClr + ';opacity:.7;">error</span></div>';
+      out += `<div style="font-family:'DM Mono',monospace;font-size:1.4rem;font-weight:700;color:` + topicClr + `;background:` + topicBg + `;padding:4px 14px;border-radius:8px;display:inline-block;line-height:1.2;">` + topicPct + `% <span style="font-size:.65rem;font-weight:600;color:` + topicClr + `;opacity:.7;">error</span></div>`;
       out += '</div>';
       out += '</div>';
       // Progress bar inside header
@@ -4177,7 +4181,7 @@ window.showWeakAreas = function(answers, questions) {
         out += '<div style="width:80px;height:5px;background:#eceae4;border-radius:3px;overflow:hidden;">';
         out += '<div style="height:100%;width:' + stPct + '%;background:' + stClr + ';border-radius:3px;"></div>';
         out += '</div>';
-        out += '<div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:' + stClr + ';min-width:38px;text-align:right;">' + stPct + '%</div>';
+        out += `<div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:` + stClr + `;min-width:38px;text-align:right;">` + stPct + `%</div>`;
         out += '</div>';
         out += '</div>';
       });
