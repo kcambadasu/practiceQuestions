@@ -4925,7 +4925,7 @@ if (examStarted && questions.length === 0) {
                             {/* ── Performance Breakdown ── */}
                             <div style={{ marginBottom:48 }}>
                                 <SectionEyebrow label="Performance Breakdown" />
-                                <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'clamp(1.5rem,2.8vw,2rem)', fontWeight:700, color:'#0f1e3c', lineHeight:1.2, marginBottom:24 }}>Score by Difficulty &amp; Chapter</h2>
+                                <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'clamp(1.5rem,2.8vw,2rem)', fontWeight:700, color:'#0f1e3c', lineHeight:1.2, marginBottom:24 }}>Score by Difficulty</h2>
                                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:24 }}>
 
                                     {/* By difficulty */}
@@ -4955,128 +4955,6 @@ if (examStarted && questions.length === 0) {
                                         </div>
                                     </div>
 
-                                    {/* Wrong subtopics — grouped by main topic */}
-                                    {(() => {
-                                        // Build a chapter→mainTopic lookup from TOPICS_REF
-                                        const chapterToMainTopic = {};
-                                        const topicMeta = {}; // topicLabel → { icon, label }
-                                        if (window.TOPICS) {
-                                            window.TOPICS.forEach(t => {
-                                                topicMeta[t.label] = { icon: t.icon, label: t.label };
-                                                (t.chapters || []).forEach(ch => {
-                                                    chapterToMainTopic[ch.label] = t.label;
-                                                    chapterToMainTopic[ch.id]    = t.label;
-                                                });
-                                            });
-                                        }
-
-                                        // Collect per-subtopic wrong counts, also track totals per main topic
-                                        const mainTopicStats = {}; // mainTopic → { totalAttempted, totalWrong, subtopics:{} }
-                                        questions.forEach(q => {
-                                            const ans = answers[q.id];
-                                            if (!ans) return;
-                                            const chName  = q.chapterName || ('Ch ' + q.chapter);
-                                            const mainTopic = chapterToMainTopic[chName] || chapterToMainTopic[q.chapter] || chName;
-                                            const subtopic  = q.topic || 'General';
-                                            if (!mainTopicStats[mainTopic]) mainTopicStats[mainTopic] = { totalAttempted: 0, totalWrong: 0, subtopics: {} };
-                                            mainTopicStats[mainTopic].totalAttempted++;
-                                            if (ans.selected !== q.correctAnswer) {
-                                                mainTopicStats[mainTopic].totalWrong++;
-                                                const st = mainTopicStats[mainTopic].subtopics;
-                                                if (!st[subtopic]) st[subtopic] = { wrong: 0, total: 0 };
-                                                st[subtopic].wrong++;
-                                            }
-                                            // count subtopic attempts regardless
-                                            const st = mainTopicStats[mainTopic].subtopics;
-                                            if (!st[subtopic]) st[subtopic] = { wrong: 0, total: 0 };
-                                            st[subtopic].total++;
-                                        });
-
-                                        // Filter to main topics that have at least 1 wrong answer
-                                        const topicsWithErrors = Object.entries(mainTopicStats)
-                                            .filter(([, d]) => d.totalWrong > 0)
-                                            .sort((a, b) => b[1].totalWrong - a[1].totalWrong);
-
-                                        const totalWrongAll = topicsWithErrors.reduce((s, [,d]) => s + d.totalWrong, 0);
-
-                                        if (topicsWithErrors.length === 0) return (
-                                            <div style={{ background:'#fff', border:'1px solid #ddd8cc', borderRadius:16, overflow:'hidden', boxShadow:'0 2px 12px rgba(15,30,60,.07)' }}>
-                                                <div style={{ background:'#0f1e3c', padding:'14px 22px' }}>
-                                                    <span style={{ fontSize:'.65rem', fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'#e8c97a' }}>Wrong Answers by Subtopic</span>
-                                                </div>
-                                                <div style={{ padding:'28px 22px', textAlign:'center' }}>
-                                                    <div style={{ fontSize:'1.5rem', marginBottom:8 }}>🏆</div>
-                                                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', fontWeight:700, color:'#0f1e3c', marginBottom:4 }}>No Wrong Answers!</div>
-                                                    <div style={{ fontSize:'.8rem', color:'#7a7a9a' }}>Perfect score on all answered questions.</div>
-                                                </div>
-                                            </div>
-                                        );
-
-                                        return (
-                                            <div style={{ background:'#fff', border:'1px solid #ddd8cc', borderRadius:16, overflow:'hidden', boxShadow:'0 2px 12px rgba(15,30,60,.07)' }}>
-                                                {/* Header */}
-                                                <div style={{ background:'#0f1e3c', padding:'14px 22px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                                                    <span style={{ fontSize:'.65rem', fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'#e8c97a' }}>Wrong Answers by Subtopic</span>
-                                                    <span style={{ fontSize:'.65rem', color:'rgba(255,255,255,.35)' }}>{totalWrongAll} wrong across {topicsWithErrors.length} topic{topicsWithErrors.length > 1 ? 's' : ''}</span>
-                                                </div>
-
-                                                {/* Main topic groups */}
-                                                <div style={{ padding:'6px 0' }}>
-                                                    {topicsWithErrors.map(([mainTopic, data], topicIdx) => {
-                                                        const meta = topicMeta[mainTopic] || {};
-                                                        const topicPct = Math.round(data.totalWrong / data.totalAttempted * 100);
-                                                        const subtopicRows = Object.entries(data.subtopics)
-                                                            .filter(([, s]) => s.wrong > 0)
-                                                            .sort((a, b) => b[1].wrong - a[1].wrong);
-
-                                                        return (
-                                                            <div key={mainTopic} style={{ borderBottom: topicIdx < topicsWithErrors.length - 1 ? '1px solid #eceae4' : 'none' }}>
-                                                                {/* Topic header row */}
-                                                                <div style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 22px', background:'#faf8f3' }}>
-                                                                    {meta.icon && <span style={{ fontSize:'1.1rem', flexShrink:0 }}>{meta.icon}</span>}
-                                                                    <div style={{ flex:1, minWidth:0 }}>
-                                                                        <div style={{ fontSize:'.88rem', fontWeight:700, color:'#0f1e3c' }}>{mainTopic}</div>
-                                                                        <div style={{ fontSize:'.7rem', color:'#7a7a9a', marginTop:2 }}>
-                                                                            {data.totalWrong} wrong of {data.totalAttempted} attempted
-                                                                        </div>
-                                                                    </div>
-                                                                    {/* Topic-level error bar */}
-                                                                    <div style={{ width:90, flexShrink:0 }}>
-                                                                        <div style={{ background:'#eceae4', borderRadius:3, height:5, overflow:'hidden' }}>
-                                                                            <div style={{ height:'100%', width:`${topicPct}%`, background: topicPct >= 60 ? '#c0392b' : topicPct >= 35 ? '#c9700a' : '#a07c30', borderRadius:3, transition:'width .6s ease' }} />
-                                                                        </div>
-                                                                        <div style={{ fontSize:'.65rem', color: topicPct >= 60 ? '#c0392b' : topicPct >= 35 ? '#c9700a' : '#a07c30', fontWeight:700, fontFamily:"'DM Mono',monospace", textAlign:'right', marginTop:3 }}>{topicPct}% error rate</div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Subtopic rows */}
-                                                                <div style={{ padding:'4px 22px 12px 22px', display:'flex', flexDirection:'column', gap:6 }}>
-                                                                    {subtopicRows.map(([subtopic, st], i) => {
-                                                                        const stPct = Math.round(st.wrong / st.total * 100);
-                                                                        const isTop = i === 0;
-                                                                        return (
-                                                                            <div key={subtopic} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', background: isTop ? '#fdecea' : '#fff', border:`1px solid ${isTop ? '#f0bfbf' : '#eceae4'}`, borderLeft:`3px solid ${stPct >= 60 ? '#c0392b' : stPct >= 35 ? '#c9700a' : '#a07c30'}`, borderRadius:'0 8px 8px 0' }}>
-                                                                                <div style={{ flex:1, minWidth:0 }}>
-                                                                                    <div style={{ fontSize:'.81rem', fontWeight:600, color:'#1a1a2e' }}>{subtopic}</div>
-                                                                                    <div style={{ fontSize:'.68rem', color:'#7a7a9a', marginTop:1 }}>{st.wrong} wrong of {st.total} attempted</div>
-                                                                                </div>
-                                                                                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-                                                                                    <div style={{ width:70, background:'#eceae4', borderRadius:3, height:4, overflow:'hidden' }}>
-                                                                                        <div style={{ height:'100%', width:`${stPct}%`, background: stPct >= 60 ? '#c0392b' : stPct >= 35 ? '#c9700a' : '#a07c30', borderRadius:3 }} />
-                                                                                    </div>
-                                                                                    <span style={{ fontFamily:"'DM Mono',monospace", fontSize:'.75rem', fontWeight:700, color: stPct >= 60 ? '#c0392b' : stPct >= 35 ? '#c9700a' : '#7a5a10', minWidth:36, textAlign:'right' }}>{stPct}%</span>
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
                                 </div>
                             </div>
 
