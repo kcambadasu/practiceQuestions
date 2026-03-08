@@ -1404,9 +1404,54 @@ let shuffleOn = false;
 let masteryOn = false;
 let reactMounted = false;
 
+// Returns a Set of TOPICS chapter ids (e.g. 'fsa-3', 'qm-1') that have formula_drill questions.
+// Reads live from window.QUESTIONS_DATA so it always matches the loaded questions.js.
+function getMasteryChapterSet() {
+  var allQ = window.QUESTIONS_DATA || window.questions || [];
+  // Collect every q.chapter value that belongs to a formula_drill question
+  var fdQChapters = new Set(
+    allQ.filter(function(q){ return q.questionType === 'formula_drill'; })
+        .map(function(q){ return String(q.chapter); })
+  );
+  // Reverse-map TOPICS chapter ids → question chapter values via CHAPTER_ID_MAP
+  var idMap = window.CHAPTER_ID_MAP || {};
+  var validTopicChIds = new Set();
+  TOPICS.forEach(function(t) {
+    t.chapters.forEach(function(ch) {
+      var mappedVal = idMap[ch.id] || ch.id;
+      if (fdQChapters.has(mappedVal) || fdQChapters.has(ch.id)) {
+        validTopicChIds.add(ch.id);
+      }
+    });
+  });
+  return validTopicChIds;
+}
+
 function buildTopicDropdown() {
   const sel = document.getElementById('topicDropdown');
   sel.innerHTML = '<option value="" disabled selected>— Select a topic —</option>';
+
+  if (masteryOn) {
+    // Only show topics that contain at least one chapter with formula_drill questions
+    const masteryChIds = getMasteryChapterSet();
+    const masteryTopics = TOPICS.filter(t => t.chapters.some(ch => masteryChIds.has(ch.id)));
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = '🧮  All Formula Topics';
+    sel.appendChild(allOpt);
+    const sep = document.createElement('option');
+    sep.disabled = true; sep.textContent = '──────────────────────────';
+    sel.appendChild(sep);
+    masteryTopics.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.icon + '  ' + t.label;
+      sel.appendChild(opt);
+    });
+    return;
+  }
+
+  // Normal mode — full list
   const allOpt = document.createElement('option');
   allOpt.value = 'all';
   allOpt.textContent = '📚  All Topics';
@@ -1437,28 +1482,39 @@ function buildChapterDropdownForTopic(topicId) {
   sel.innerHTML = '<option value="" disabled selected>— Select a chapter —</option>';
   sel.disabled = !topicId;
   if (!topicId) return;
+
   if (topicId === 'all') {
-    // "All within each topic" option
     const allOpt = document.createElement('option');
     allOpt.value = 'all';
-    allOpt.textContent = '📚  All Chapters';
+    allOpt.textContent = masteryOn ? '🧮  All Formula Chapters' : '📚  All Chapters';
     sel.appendChild(allOpt);
     return;
   }
+
   const topic = TOPICS.find(t => t.id === topicId);
   if (!topic) return;
-  // All chapters in topic
-  const topicTotal = topic.chapters.filter(c => c.available).reduce((s,c) => s+c.count, 0);
-  if (topicTotal > 0) {
+
+  // In mastery mode, restrict to chapters that actually have formula_drill questions
+  let chapters = topic.chapters;
+  if (masteryOn) {
+    const masteryChIds = getMasteryChapterSet();
+    chapters = chapters.filter(ch => masteryChIds.has(ch.id));
+    if (chapters.length === 0) { sel.disabled = true; return; }
+  }
+
+  // "All [topic]" option
+  const hasAvail = chapters.some(c => c.available);
+  if (hasAvail) {
     const allOpt = document.createElement('option');
     allOpt.value = topicId + '-all';
-    allOpt.textContent = '📚  All ' + topic.label;
+    allOpt.textContent = (masteryOn ? '🧮  All ' : '📚  All ') + topic.label;
     sel.appendChild(allOpt);
     const sep = document.createElement('option');
     sep.disabled = true; sep.textContent = '──────────────────────────';
     sel.appendChild(sep);
   }
-  topic.chapters.forEach(ch => {
+
+  chapters.forEach(ch => {
     const opt = document.createElement('option');
     opt.value = ch.id;
     if (!ch.available) {
@@ -1486,7 +1542,13 @@ function toggleShuffle() {
 function toggleMastery() {
   masteryOn = !masteryOn;
   document.getElementById('masteryToggle').classList.toggle('on', masteryOn);
-  // Mastery mode bypasses the chapter requirement — update button state immediately
+  // Reset current selections — the available options change completely
+  selectedTopic = null;
+  selectedChapter = null;
+  document.getElementById('topicDropdown').value = '';
+  // Rebuild both dropdowns with the new filter
+  buildTopicDropdown();
+  buildChapterDropdownForTopic(null);
   updatePreview();
   updateStartBtn();
 }
