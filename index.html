@@ -306,6 +306,7 @@ select:disabled{opacity:.55;cursor:not-allowed}
   flex-shrink:0;
 }
 .toggle.on{background:var(--navy)}
+#masteryToggle.on{background:linear-gradient(135deg,var(--gold-dim),var(--gold))}
 .toggle::after{
   content:'';position:absolute;
   top:3px;left:3px;
@@ -1122,12 +1123,23 @@ footer{
             </select>
           </div>
 
-          <div class="options-row">
-            <div class="toggle-wrap" onclick="toggleShuffle()">
-              <div class="toggle" id="shuffleToggle"></div>
-              <div>
-                <div class="toggle-label">Shuffle Questions</div>
-                <div class="toggle-sublabel">Randomize question order</div>
+          <div class="options-row" style="flex-direction:column;align-items:flex-start;gap:0;padding:0;border:none;margin-bottom:0;">
+            <div style="width:100%;padding:13px 0;border-top:1px solid var(--border-soft);">
+              <div class="toggle-wrap" onclick="toggleShuffle()">
+                <div class="toggle" id="shuffleToggle"></div>
+                <div>
+                  <div class="toggle-label">Shuffle Questions</div>
+                  <div class="toggle-sublabel">Randomize question order</div>
+                </div>
+              </div>
+            </div>
+            <div style="width:100%;padding:13px 0;border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);margin-bottom:20px;">
+              <div class="toggle-wrap" onclick="toggleMastery()">
+                <div class="toggle" id="masteryToggle"></div>
+                <div>
+                  <div class="toggle-label" style="display:flex;align-items:center;gap:6px;"><span style="font-size:.9rem;">🧮</span> Mastery over Formula</div>
+                  <div class="toggle-sublabel">Formula-drill questions only · No chapter required</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1389,6 +1401,7 @@ window.CHAPTER_ID_MAP = {
 let selectedTopic = null;
 let selectedChapter = null;
 let shuffleOn = false;
+let masteryOn = false;
 let reactMounted = false;
 
 function buildTopicDropdown() {
@@ -1470,13 +1483,64 @@ function toggleShuffle() {
   document.getElementById('previewShuffle').textContent = shuffleOn ? 'On ✓' : 'Off';
 }
 
+function toggleMastery() {
+  masteryOn = !masteryOn;
+  document.getElementById('masteryToggle').classList.toggle('on', masteryOn);
+  // Mastery mode bypasses the chapter requirement — update button state immediately
+  updatePreview();
+  updateStartBtn();
+}
+
+// Count formula_drill questions for the given chapter selection
+function getMasteryCount(chapter) {
+  var allQ = (window.QUESTIONS_DATA || window.questions || []);
+  if (!allQ.length) return null;
+  var filtered = allQ.filter(function(q){ return q.questionType === 'formula_drill'; });
+  if (!chapter || chapter === 'all') return filtered.length;
+  if (chapter.endsWith('-all')) {
+    var topicId = chapter.replace('-all','');
+    var topicChapters = (window.TOPICS_REF && window.TOPICS_REF[topicId]) || [];
+    var validIds = new Set(topicChapters.map(function(c){ return c.id; }));
+    var idMap = window.CHAPTER_ID_MAP || {};
+    var validMapped = new Set(topicChapters.map(function(c){ return idMap[c.id]; }).filter(Boolean));
+    filtered = filtered.filter(function(q){ return validIds.has(q.chapter) || validMapped.has(String(q.chapter)); });
+  } else {
+    var idMap2 = window.CHAPTER_ID_MAP || {};
+    var mappedId = idMap2[chapter];
+    filtered = filtered.filter(function(q){
+      return String(q.chapter) === String(chapter) || (mappedId && String(q.chapter) === String(mappedId));
+    });
+  }
+  return filtered.length;
+}
+
 function updatePreview() {
-  if (!selectedChapter) {
+  if (!selectedChapter && !masteryOn) {
     document.getElementById('previewChapter').textContent = selectedTopic ? (TOPICS.find(t=>t.id===selectedTopic)||{label:'—'}).label : '—';
     document.getElementById('previewCount').textContent = '—';
     document.getElementById('previewTime').textContent = '—';
     return;
   }
+
+  if (masteryOn) {
+    // Build a chapter label for the preview
+    var chLabel;
+    if (!selectedChapter || selectedChapter === 'all') {
+      chLabel = 'All Formula Chapters';
+    } else if (selectedChapter.endsWith('-all')) {
+      var t = TOPICS.find(function(x){ return x.id === selectedChapter.replace('-all',''); });
+      chLabel = t ? 'All ' + t.label : selectedChapter;
+    } else {
+      var ch = allChapters().find(function(c){ return c.id === selectedChapter; });
+      chLabel = ch ? ch.sub + ' · ' + ch.label.split(' ').slice(0,4).join(' ') + (ch.label.split(' ').length > 4 ? '…' : '') : selectedChapter;
+    }
+    var mCount = getMasteryCount(selectedChapter);
+    document.getElementById('previewChapter').textContent = '🧮 ' + chLabel;
+    document.getElementById('previewCount').textContent = mCount !== null ? mCount + " formula Q's" : "~990 formula Q's";
+    document.getElementById('previewTime').textContent = mCount !== null ? '~' + Math.round(mCount * 1.5) + ' min' : '—';
+    return;
+  }
+
   let label = '—', count = 0;
   if (selectedChapter === 'all') {
     label = 'All Chapters'; count = totalAvailableQuestions();
@@ -1495,13 +1559,14 @@ function updatePreview() {
 
 function updateStartBtn() {
   const btn = document.getElementById('startBtn');
-  if (!selectedChapter) {
+  // Enable if chapter is selected OR mastery mode is on (mastery works across all formula chapters)
+  if (!selectedChapter && !masteryOn) {
     btn.classList.add('disabled');
     btn.onclick = null;
     return;
   }
   btn.classList.remove('disabled');
-  window.EXAM_CONFIG = { chapter: selectedChapter, shuffle: shuffleOn };
+  window.EXAM_CONFIG = { chapter: selectedChapter || 'all', shuffle: shuffleOn, masteryMode: masteryOn };
   btn.href = '#';
   btn.onclick = function(e) { e.preventDefault(); launchExam(); };
 }
@@ -1509,7 +1574,7 @@ function updateStartBtn() {
 function launchExam() {
   try {
     // Set config
-    window.EXAM_CONFIG = { chapter: selectedChapter, shuffle: shuffleOn };
+    window.EXAM_CONFIG = { chapter: selectedChapter || 'all', shuffle: shuffleOn, masteryMode: masteryOn };
     // Show exam panel
     document.getElementById('homePanel').classList.add('hidden');
     document.getElementById('examPanel').classList.add('active');
@@ -1590,6 +1655,17 @@ function showPracticeConfig() {
 }
 
 window.showWeakAreas = function(answers, questions) {
+  // Update panel title based on mode
+  var isMastery = window.EXAM_CONFIG && window.EXAM_CONFIG.masteryMode;
+  var panelTitle = document.querySelector('#weakAreasPanel .brand-text h1');
+  var panelSub   = document.querySelector('#weakAreasPanel .brand-text p');
+  var eyebrowSpan = document.querySelector('#weakAreasPanel .wa-eyebrow span');
+  var heroHeading = document.querySelector('#weakAreasPanel .wa-hero h2');
+  if (panelTitle)   panelTitle.textContent = isMastery ? 'Formula Mastery Review' : 'Daily Challenge Review';
+  if (panelSub)     panelSub.textContent   = isMastery ? 'Formula Drill Analysis' : 'Weak Area Analysis';
+  if (eyebrowSpan)  eyebrowSpan.textContent = isMastery ? 'Formula Mastery · Drill Analysis' : 'Daily Challenge · Weak Area Analysis';
+  if (heroHeading)  heroHeading.innerHTML   = isMastery ? 'Your <em>Formula</em><br>Drill Results' : 'Your <em>Focus Areas</em><br>for Next Time';
+
   // ── Step 1: Build main-topic stats using window.TOPICS lookup ──
   var chapterToMainTopic = {};
   var topicIconMap = {};
@@ -1602,6 +1678,11 @@ window.showWeakAreas = function(answers, questions) {
       });
     });
   }
+
+  var sectionTitle = document.querySelector('#weakAreasPanel .wa-section-title');
+  var sectionSub   = document.querySelector('#weakAreasPanel .wa-section-sub');
+  if (sectionTitle) sectionTitle.textContent = isMastery ? 'Formula Topics Needing Attention' : 'Subtopics Needing Attention';
+  if (sectionSub)   sectionSub.textContent   = isMastery ? 'Ranked by wrong answers — the formula topics to drill again before your exam.' : 'Ranked by number of wrong answers — the subtopics where you need to focus your revision.';
 
   // mainTopicStats: { [mainTopic]: { icon, totalAttempted, totalWrong, subtopics: { [topic]: { wrong, total } } } }
   var mainTopicStats = {};
@@ -1915,6 +1996,16 @@ function FinanceExamApp() {
                           setLoadError('No questions found for the selected chapter. Please go back and choose a different selection.');
                           setIsLoadingQuestions(false);
                           return;
+                        }
+
+                        // Mastery mode — formula_drill questions only
+                        if (config.masteryMode) {
+                          filtered = filtered.filter(q => q.questionType === 'formula_drill');
+                          if (filtered.length === 0) {
+                            setLoadError('No formula-drill questions found for the selected chapter. Try "All Chapters" with Mastery mode.');
+                            setIsLoadingQuestions(false);
+                            return;
+                          }
                         }
 
                         let active = config.shuffle ? shuffleArray(filtered) : filtered;
@@ -2400,12 +2491,12 @@ if (examStarted && questions.length === 0) {
                             >
                                 ← Home
                             </button>
-                            {window.EXAM_CONFIG && window.EXAM_CONFIG.dailyChallenge && (
+                            {window.EXAM_CONFIG && (window.EXAM_CONFIG.dailyChallenge || window.EXAM_CONFIG.masteryMode) && (
                               <button
                                 onClick={() => window.showWeakAreas && window.showWeakAreas(answers, questions)}
                                 style={{ background:'linear-gradient(135deg,#c9a84c,#a07c30)', border:'none', color:'#0f1e3c', padding:'8px 20px', borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:700, cursor:'pointer', letterSpacing:'.03em' }}
                               >
-                                🔍 View Weak Areas →
+                                {window.EXAM_CONFIG.masteryMode ? '🧮 Formula Review →' : '🔍 View Weak Areas →'}
                               </button>
                             )}
                             </div>
