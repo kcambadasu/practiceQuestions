@@ -1116,10 +1116,18 @@ footer{
             </select>
           </div>
 
-          <span class="field-label">Chapter / Reading</span>
-          <div class="chapter-select-wrap">
+          <span class="field-label" id="chapterLabel">Chapter / Reading</span>
+          <div class="chapter-select-wrap" style="margin-bottom:12px">
             <select id="chapterDropdown" onchange="selectChapter(this.value)" disabled>
               <option value="" disabled selected>— Select a topic first —</option>
+            </select>
+          </div>
+
+          <!-- Sub-family dropdown — mastery mode only -->
+          <span class="field-label" id="subFamilyLabel" style="display:none">Formula Sub-topic</span>
+          <div class="chapter-select-wrap" id="subFamilyWrap" style="display:none;margin-bottom:12px">
+            <select id="subFamilyDropdown" onchange="selectSubFamily(this.value)" disabled>
+              <option value="" disabled selected>— Select a family first —</option>
             </select>
           </div>
 
@@ -1405,9 +1413,8 @@ window.CHAPTER_ID_MAP = {
 };
 
 // ── Formula Family Registry ───────────────────────────────────────────────────
-// Each entry maps a family prefix (= q.chapter value in formula_drill questions)
-// to its parent topic and a display label shown in the mastery chapter dropdown.
-// Add new families here as they are generated — no other code changes needed.
+// Maps family prefix (= leading portion of q.chapter) → topic + display label.
+// Add new families here when generated — no other code changes required.
 const FORMULA_FAMILIES = [
   { id: 'QM-TVM',       topicId: 'quant', label: 'Time Value of Money' },
   { id: 'QM-HT',        topicId: 'quant', label: 'Hypothesis Testing' },
@@ -1422,36 +1429,92 @@ const FORMULA_FAMILIES = [
 ];
 window.FORMULA_FAMILIES = FORMULA_FAMILIES;
 
+// Sub-family display labels — maps exact q.chapter value → human label.
+// If not listed here, the raw id is shown (e.g. 'QM-TVM-FV' → 'QM-TVM-FV').
+const SUBFAMILY_LABELS = {
+  'QM-TVM-FV':  'Future Value',
+  'QM-TVM-PV':  'Present Value',
+  'QM-TVM-ANN': 'Annuities',
+  'QM-HT-T':    't-Test',
+};
+window.SUBFAMILY_LABELS = SUBFAMILY_LABELS;
+
+// ── Mastery state ─────────────────────────────────────────────────────────────
+let selectedSubFamily = null;   // exact q.chapter value e.g. 'QM-TVM-FV', or null
+
 // Returns the family entry whose id is a prefix of the given q.chapter value.
-// e.g. 'QM-TVM-FV' → { id:'QM-TVM', topicId:'quant', label:'Time Value of Money' }
 function familyForChapter(chapterVal) {
   if (!chapterVal) return null;
-  return FORMULA_FAMILIES.find(function(f){ return String(chapterVal).startsWith(f.id); }) || null;
+  // Sort descending by id length so longer (more specific) prefixes match first
+  var sorted = FORMULA_FAMILIES.slice().sort((a,b) => b.id.length - a.id.length);
+  return sorted.find(function(f){ return String(chapterVal).startsWith(f.id); }) || null;
 }
 
-// Returns a Set of TOPICS topic ids that have at least one formula_drill question.
-function getMasteryTopicSet() {
+// Returns the topic id for a formula_drill q.chapter value, or null.
+function topicForChapter(chapterVal) {
+  var fam = familyForChapter(chapterVal);
+  return fam ? fam.topicId : null;
+}
+
+// Live list of topic ids that have ≥1 formula_drill question.
+function getMasteryTopicIds() {
   var allQ = window.QUESTIONS_DATA || window.questions || [];
-  var topicSet = new Set();
+  var set = new Set();
   allQ.forEach(function(q){
     if (q.questionType !== 'formula_drill') return;
-    var fam = familyForChapter(q.chapter);
-    if (fam) topicSet.add(fam.topicId);
+    var tid = topicForChapter(q.chapter);
+    if (tid) set.add(tid);
   });
-  return topicSet;
+  return set;
 }
 
-// Returns families (from FORMULA_FAMILIES) that have at least one question in questions.js,
-// optionally filtered to a specific topicId.
+// Live list of FORMULA_FAMILIES entries with ≥1 question, optionally filtered to a topic.
 function getActiveFamilies(topicId) {
   var allQ = window.QUESTIONS_DATA || window.questions || [];
-  var activeFamIds = new Set();
+  var activeIds = new Set();
   allQ.forEach(function(q){
     if (q.questionType !== 'formula_drill') return;
     var fam = familyForChapter(q.chapter);
-    if (fam && (!topicId || fam.topicId === topicId)) activeFamIds.add(fam.id);
+    if (fam && (!topicId || fam.topicId === topicId)) activeIds.add(fam.id);
   });
-  return FORMULA_FAMILIES.filter(function(f){ return activeFamIds.has(f.id) && (!topicId || f.topicId === topicId); });
+  return FORMULA_FAMILIES.filter(function(f){
+    return activeIds.has(f.id) && (!topicId || f.topicId === topicId);
+  });
+}
+
+// Live list of distinct q.chapter values (sub-families) for a given family prefix.
+// e.g. familyId='QM-TVM' → ['QM-TVM-FV','QM-TVM-PV','QM-TVM-ANN']
+function getActiveSubFamilies(familyId) {
+  var allQ = window.QUESTIONS_DATA || window.questions || [];
+  var seen = new Set();
+  allQ.forEach(function(q){
+    if (q.questionType !== 'formula_drill') return;
+    if (String(q.chapter).startsWith(familyId)) seen.add(q.chapter);
+  });
+  // Only show sub-family options if the chapter value is LONGER than the family id
+  // (i.e. has a suffix — otherwise it IS the family itself, not a sub)
+  var subs = Array.from(seen).filter(function(v){ return v.length > familyId.length; });
+  return subs.sort();
+}
+
+// Count formula_drill questions matching the current mastery selection.
+// sel = { topic, family, subFamily } — any can be null/"all"
+function getMasteryCount(sel) {
+  var allQ = window.QUESTIONS_DATA || window.questions || [];
+  if (!allQ.length) return null;
+  var filtered = allQ.filter(function(q){ return q.questionType === 'formula_drill'; });
+  if (sel.subFamily) {
+    filtered = filtered.filter(function(q){ return q.chapter === sel.subFamily; });
+  } else if (sel.family) {
+    filtered = filtered.filter(function(q){ return String(q.chapter).startsWith(sel.family); });
+  } else if (sel.topic && sel.topic !== 'all') {
+    var famIds = new Set(getActiveFamilies(sel.topic).map(function(f){ return f.id; }));
+    filtered = filtered.filter(function(q){
+      var fam = familyForChapter(q.chapter);
+      return fam && famIds.has(fam.id);
+    });
+  }
+  return filtered.length;
 }
 
 
@@ -1461,44 +1524,25 @@ let shuffleOn = false;
 let masteryOn = false;
 let reactMounted = false;
 
-// Count formula_drill questions for a given mastery selection.
-// chapter can be: null/'all' → all families | 'topicId-all' → all families in topic | a family id like 'QM-TVM'
-function getMasteryCount(chapter) {
-  var allQ = (window.QUESTIONS_DATA || window.questions || []);
-  if (!allQ.length) return null;
-  var filtered = allQ.filter(function(q){ return q.questionType === 'formula_drill'; });
-  if (!chapter || chapter === 'all') return filtered.length;
-  if (chapter.endsWith('-all')) {
-    var topicId = chapter.replace('-all','');
-    var topicFamilies = getActiveFamilies(topicId);
-    var famIds = new Set(topicFamilies.map(function(f){ return f.id; }));
-    filtered = filtered.filter(function(q){
-      var fam = familyForChapter(q.chapter);
-      return fam && famIds.has(fam.id);
-    });
-  } else {
-    // chapter is a family id prefix e.g. 'QM-TVM'
-    filtered = filtered.filter(function(q){ return String(q.chapter).startsWith(chapter); });
-  }
-  return filtered.length;
-}
+// ── Dropdown builders ────────────────────────────────────────────────────────
 
 function buildTopicDropdown() {
   const sel = document.getElementById('topicDropdown');
   sel.innerHTML = '<option value="" disabled selected>— Select a topic —</option>';
 
+  // Update chapter label text
+  document.getElementById('chapterLabel').textContent = masteryOn ? 'Formula Family' : 'Chapter / Reading';
+
   if (masteryOn) {
-    // Only show topics that have at least one formula_drill family with questions
-    const masteryTopicIds = getMasteryTopicSet();
-    const masteryTopics = TOPICS.filter(t => masteryTopicIds.has(t.id));
+    const topicIds = getMasteryTopicIds();
+    const topics = TOPICS.filter(t => topicIds.has(t.id));
     const allOpt = document.createElement('option');
-    allOpt.value = 'all';
-    allOpt.textContent = '🧮  All Formula Topics';
+    allOpt.value = 'all'; allOpt.textContent = '🧮  All Formula Topics';
     sel.appendChild(allOpt);
     const sep = document.createElement('option');
     sep.disabled = true; sep.textContent = '──────────────────────────';
     sel.appendChild(sep);
-    masteryTopics.forEach(t => {
+    topics.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = t.icon + '  ' + t.label;
@@ -1507,10 +1551,9 @@ function buildTopicDropdown() {
     return;
   }
 
-  // Normal mode — full list
+  // Normal mode
   const allOpt = document.createElement('option');
-  allOpt.value = 'all';
-  allOpt.textContent = '📚  All Topics';
+  allOpt.value = 'all'; allOpt.textContent = '📚  All Topics';
   sel.appendChild(allOpt);
   const sep = document.createElement('option');
   sep.disabled = true; sep.textContent = '──────────────────────────';
@@ -1524,78 +1567,141 @@ function buildTopicDropdown() {
   });
 }
 
-function selectTopic(topicId) {
-  selectedTopic = topicId || null;
-  selectedChapter = null;
-  // Reset chapter dropdown
-  buildChapterDropdownForTopic(topicId);
-  updatePreview();
-  updateStartBtn();
-}
-
 function buildChapterDropdownForTopic(topicId) {
   const sel = document.getElementById('chapterDropdown');
-  sel.innerHTML = '<option value="" disabled selected>— Select a chapter —</option>';
+  sel.innerHTML = '<option value="" disabled selected>— Select a topic first —</option>';
   sel.disabled = !topicId;
+  // Reset sub-family whenever family changes
+  hideSubFamilyDropdown();
+
   if (!topicId) return;
 
-  if (topicId === 'all') {
-    const allOpt = document.createElement('option');
-    allOpt.value = 'all';
-    allOpt.textContent = masteryOn ? '🧮  All Formula Families' : '📚  All Chapters';
-    sel.appendChild(allOpt);
-    return;
-  }
-
   if (masteryOn) {
-    // Show formula families available for this topic (live from questions.js)
+    if (topicId === 'all') {
+      const opt = document.createElement('option');
+      opt.value = 'all'; opt.textContent = '🧮  All Formula Families';
+      sel.appendChild(opt);
+      sel.disabled = false;
+      return;
+    }
     const families = getActiveFamilies(topicId);
-    if (families.length === 0) { sel.disabled = true; return; }
+    if (!families.length) { sel.disabled = true; return; }
     const topic = TOPICS.find(t => t.id === topicId);
     const allOpt = document.createElement('option');
     allOpt.value = topicId + '-all';
-    allOpt.textContent = '🧮  All ' + (topic ? topic.label : topicId) + ' Formulas';
+    allOpt.textContent = '🧮  All ' + (topic ? topic.label : topicId) + ' Families';
     sel.appendChild(allOpt);
     const sep = document.createElement('option');
     sep.disabled = true; sep.textContent = '──────────────────────────';
     sel.appendChild(sep);
     families.forEach(fam => {
       const opt = document.createElement('option');
-      opt.value = fam.id;   // e.g. 'QM-TVM'
+      opt.value = fam.id;
       opt.textContent = '🧮  ' + fam.label;
       sel.appendChild(opt);
     });
+    sel.disabled = false;
     return;
   }
 
-  // Normal mode — show regular chapters
+  // Normal mode
+  if (topicId === 'all') {
+    const opt = document.createElement('option');
+    opt.value = 'all'; opt.textContent = '📚  All Chapters';
+    sel.appendChild(opt);
+    sel.disabled = false;
+    return;
+  }
   const topic = TOPICS.find(t => t.id === topicId);
   if (!topic) return;
-  const hasAvail = topic.chapters.some(c => c.available);
-  if (hasAvail) {
-    const allOpt = document.createElement('option');
-    allOpt.value = topicId + '-all';
-    allOpt.textContent = '📚  All ' + topic.label;
-    sel.appendChild(allOpt);
-    const sep = document.createElement('option');
-    sep.disabled = true; sep.textContent = '──────────────────────────';
-    sel.appendChild(sep);
-  }
+  const allOpt = document.createElement('option');
+  allOpt.value = topicId + '-all';
+  allOpt.textContent = '📚  All ' + topic.label;
+  sel.appendChild(allOpt);
+  const sep = document.createElement('option');
+  sep.disabled = true; sep.textContent = '──────────────────────────';
+  sel.appendChild(sep);
   topic.chapters.forEach(ch => {
     const opt = document.createElement('option');
     opt.value = ch.id;
-    if (!ch.available) {
-      opt.disabled = true;
-      opt.textContent = ch.sub + '  ' + ch.label + '  (Coming Soon)';
-    } else {
-      opt.textContent = ch.sub + '  ' + ch.label;
-    }
+    opt.disabled = !ch.available;
+    opt.textContent = ch.sub + '  ' + ch.label + (!ch.available ? '  (Coming Soon)' : '');
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+}
+
+// Sub-family dropdown — only shown in mastery mode when a specific family is selected
+function buildSubFamilyDropdown(familyId) {
+  const subs = getActiveSubFamilies(familyId);
+  const wrap = document.getElementById('subFamilyWrap');
+  const label = document.getElementById('subFamilyLabel');
+  const sel = document.getElementById('subFamilyDropdown');
+
+  if (!subs.length) {
+    // No subs — hide the dropdown, family itself is the finest granularity
+    wrap.style.display = 'none';
+    label.style.display = 'none';
+    sel.disabled = true;
+    return;
+  }
+
+  wrap.style.display = '';
+  label.style.display = '';
+  sel.innerHTML = '';
+  sel.disabled = false;
+
+  const fam = FORMULA_FAMILIES.find(f => f.id === familyId);
+  const allOpt = document.createElement('option');
+  allOpt.value = familyId + '-all';
+  allOpt.textContent = '🧮  All ' + (fam ? fam.label : familyId);
+  sel.appendChild(allOpt);
+  const sep = document.createElement('option');
+  sep.disabled = true; sep.textContent = '──────────────────────────';
+  sel.appendChild(sep);
+  subs.forEach(function(sv) {
+    const opt = document.createElement('option');
+    opt.value = sv;
+    opt.textContent = '🔹  ' + (window.SUBFAMILY_LABELS[sv] || sv);
     sel.appendChild(opt);
   });
 }
 
+function hideSubFamilyDropdown() {
+  document.getElementById('subFamilyWrap').style.display = 'none';
+  document.getElementById('subFamilyLabel').style.display = 'none';
+  document.getElementById('subFamilyDropdown').disabled = true;
+  selectedSubFamily = null;
+}
+
+function selectTopic(topicId) {
+  selectedTopic = topicId || null;
+  selectedChapter = null;
+  selectedSubFamily = null;
+  buildChapterDropdownForTopic(topicId);
+  updatePreview();
+  updateStartBtn();
+}
+
 function selectChapter(id) {
   selectedChapter = id || null;
+  selectedSubFamily = null;
+  // In mastery mode, check if the selected family has sub-families
+  if (masteryOn && id && !id.endsWith('-all') && id !== 'all') {
+    buildSubFamilyDropdown(id);
+  } else {
+    hideSubFamilyDropdown();
+  }
+  updatePreview();
+  updateStartBtn();
+}
+
+function selectSubFamily(val) {
+  if (!val || val.endsWith('-all')) {
+    selectedSubFamily = null;
+  } else {
+    selectedSubFamily = val;
+  }
   updatePreview();
   updateStartBtn();
 }
@@ -1609,38 +1715,15 @@ function toggleShuffle() {
 function toggleMastery() {
   masteryOn = !masteryOn;
   document.getElementById('masteryToggle').classList.toggle('on', masteryOn);
-  // Reset current selections — the available options change completely
   selectedTopic = null;
   selectedChapter = null;
+  selectedSubFamily = null;
   document.getElementById('topicDropdown').value = '';
-  // Rebuild both dropdowns with the new filter
+  hideSubFamilyDropdown();
   buildTopicDropdown();
   buildChapterDropdownForTopic(null);
   updatePreview();
   updateStartBtn();
-}
-
-// Count formula_drill questions for the given chapter selection
-function getMasteryCount(chapter) {
-  var allQ = (window.QUESTIONS_DATA || window.questions || []);
-  if (!allQ.length) return null;
-  var filtered = allQ.filter(function(q){ return q.questionType === 'formula_drill'; });
-  if (!chapter || chapter === 'all') return filtered.length;
-  if (chapter.endsWith('-all')) {
-    var topicId = chapter.replace('-all','');
-    var topicChapters = (window.TOPICS_REF && window.TOPICS_REF[topicId]) || [];
-    var validIds = new Set(topicChapters.map(function(c){ return c.id; }));
-    var idMap = window.CHAPTER_ID_MAP || {};
-    var validMapped = new Set(topicChapters.map(function(c){ return idMap[c.id]; }).filter(Boolean));
-    filtered = filtered.filter(function(q){ return validIds.has(q.chapter) || validMapped.has(String(q.chapter)); });
-  } else {
-    var idMap2 = window.CHAPTER_ID_MAP || {};
-    var mappedId = idMap2[chapter];
-    filtered = filtered.filter(function(q){
-      return String(q.chapter) === String(chapter) || (mappedId && String(q.chapter) === String(mappedId));
-    });
-  }
-  return filtered.length;
 }
 
 function updatePreview() {
@@ -1652,24 +1735,28 @@ function updatePreview() {
   }
 
   if (masteryOn) {
+    // Build label from most-specific selection
     var chLabel;
-    if (!selectedChapter || selectedChapter === 'all') {
-      chLabel = 'All Formula Families';
+    if (selectedSubFamily) {
+      chLabel = (window.SUBFAMILY_LABELS[selectedSubFamily] || selectedSubFamily);
+    } else if (!selectedChapter || selectedChapter === 'all') {
+      chLabel = 'All Formula Topics';
     } else if (selectedChapter.endsWith('-all')) {
       var t = TOPICS.find(function(x){ return x.id === selectedChapter.replace('-all',''); });
-      chLabel = t ? 'All ' + t.label + ' Formulas' : selectedChapter;
+      chLabel = t ? 'All ' + t.label + ' Families' : selectedChapter;
     } else {
-      // selectedChapter is a family id e.g. 'QM-TVM'
       var fam = FORMULA_FAMILIES.find(function(f){ return f.id === selectedChapter; });
       chLabel = fam ? fam.label : selectedChapter;
     }
-    var mCount = getMasteryCount(selectedChapter);
+    var sel = { topic: selectedTopic, family: selectedChapter, subFamily: selectedSubFamily };
+    var mCount = getMasteryCount(sel);
     document.getElementById('previewChapter').textContent = '🧮 ' + chLabel;
-    document.getElementById('previewCount').textContent = mCount !== null ? mCount + " formula Q's" : "~formula Q's";
-    document.getElementById('previewTime').textContent = mCount ? '~' + Math.round(mCount * 1.5) + ' min' : '—';
+    document.getElementById('previewCount').textContent = mCount !== null ? mCount + " formula Q's" : '—';
+    document.getElementById('previewTime').textContent = (mCount !== null && mCount > 0) ? '~' + Math.round(mCount * 1.5) + ' min' : '—';
     return;
   }
 
+  // Normal mode
   let label = '—', count = 0;
   if (selectedChapter === 'all') {
     label = 'All Chapters'; count = totalAvailableQuestions();
@@ -1688,22 +1775,30 @@ function updatePreview() {
 
 function updateStartBtn() {
   const btn = document.getElementById('startBtn');
-  // Enable if chapter is selected OR mastery mode is on (mastery works across all formula chapters)
   if (!selectedChapter && !masteryOn) {
     btn.classList.add('disabled');
     btn.onclick = null;
     return;
   }
   btn.classList.remove('disabled');
-  window.EXAM_CONFIG = { chapter: selectedChapter || 'all', shuffle: shuffleOn, masteryMode: masteryOn };
+  window.EXAM_CONFIG = {
+    chapter: selectedChapter || 'all',
+    subFamily: selectedSubFamily || null,
+    shuffle: shuffleOn,
+    masteryMode: masteryOn
+  };
   btn.href = '#';
   btn.onclick = function(e) { e.preventDefault(); launchExam(); };
 }
 
 function launchExam() {
   try {
-    // Set config
-    window.EXAM_CONFIG = { chapter: selectedChapter || 'all', shuffle: shuffleOn, masteryMode: masteryOn };
+    window.EXAM_CONFIG = {
+      chapter: selectedChapter || 'all',
+      subFamily: selectedSubFamily || null,
+      shuffle: shuffleOn,
+      masteryMode: masteryOn
+    };
     // Show exam panel
     document.getElementById('homePanel').classList.add('hidden');
     document.getElementById('examPanel').classList.add('active');
@@ -2127,26 +2222,28 @@ function FinanceExamApp() {
                           return;
                         }
 
-                        // Mastery mode — formula_drill questions only, filtered by family
+                        // Mastery mode — formula_drill questions only, with 3-level filter
                         if (config.masteryMode) {
                           let fdFiltered = data.filter(q => q.questionType === 'formula_drill');
-                          // Further restrict to selected family or topic if not 'all'
-                          if (config.chapter && config.chapter !== 'all') {
+                          if (config.subFamily) {
+                            // Most specific: exact sub-family e.g. 'QM-TVM-FV'
+                            fdFiltered = fdFiltered.filter(q => q.chapter === config.subFamily);
+                          } else if (config.chapter && config.chapter !== 'all') {
                             if (config.chapter.endsWith('-all')) {
-                              // All families within a topic e.g. 'quant-all'
+                              // All families within a topic
                               const topicId = config.chapter.replace('-all', '');
-                              const topicFamIds = new Set((window.FORMULA_FAMILIES || []).filter(f => f.topicId === topicId).map(f => f.id));
+                              const famIds = new Set((window.FORMULA_FAMILIES || []).filter(f => f.topicId === topicId).map(f => f.id));
                               fdFiltered = fdFiltered.filter(q => {
                                 const fam = (window.FORMULA_FAMILIES || []).find(f => String(q.chapter).startsWith(f.id));
-                                return fam && topicFamIds.has(fam.id);
+                                return fam && famIds.has(fam.id);
                               });
                             } else {
-                              // Single family prefix e.g. 'QM-TVM'
+                              // Specific family prefix e.g. 'QM-TVM'
                               fdFiltered = fdFiltered.filter(q => String(q.chapter).startsWith(config.chapter));
                             }
                           }
                           if (fdFiltered.length === 0) {
-                            setLoadError('No formula-drill questions found for this selection. Try "All Formula Topics" to practice all available families.');
+                            setLoadError('No formula-drill questions found for this selection.');
                             setIsLoadingQuestions(false);
                             return;
                           }
