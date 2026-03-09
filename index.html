@@ -1413,108 +1413,92 @@ window.CHAPTER_ID_MAP = {
 };
 
 // ── Formula Family Registry ───────────────────────────────────────────────────
-// Maps family prefix (= leading portion of q.chapter) → topic + display label.
-// Add new families here when generated — no other code changes required.
+// id      = exact q.chapter value in questions.js
+// topicId = TOPICS entry id
+// label   = display name in dropdown
+// subs[]  = distinct q.topic values within this chapter (3rd-level filter)
 const FORMULA_FAMILIES = [
-  { id: 'QM-TVM',       topicId: 'quant', label: 'Time Value of Money' },
-  { id: 'QM-HT',        topicId: 'quant', label: 'Hypothesis Testing' },
-  { id: 'FI-DUR',       topicId: 'fi',    label: 'Duration & Convexity' },
-  { id: 'FI-SPREAD',    topicId: 'fi',    label: 'Yield Spreads' },
-  { id: 'FSA-RATIO',    topicId: 'fsa',   label: 'Financial Ratios' },
-  { id: 'FSA-INV',      topicId: 'fsa',   label: 'Inventory Analysis' },
-  { id: 'FSA-FA',       topicId: 'fsa',   label: 'Financial Analysis' },
-  { id: 'DV-FWD',       topicId: 'deriv', label: 'Forward Contracts' },
-  { id: 'PM-PORT-MATH', topicId: 'pm',    label: 'Portfolio Mathematics' },
-  { id: 'PM-CAPM',      topicId: 'pm',    label: 'CAPM' },
+  { id: 'QM-1', topicId: 'quant', label: 'Time Value of Money', subs: [
+    'Future Value', 'Present Value', 'Annuity', 'Perpetuity',
+    'Effective Annual Rate', 'NPV', 'Compounding',
+  ]},
+  { id: 'QM-3', topicId: 'quant', label: 'Probability Concepts', subs: [
+    'Addition Rule', 'Multiplication Rule', 'Conditional Probability',
+    'Bayes Theorem', 'Expected Value', 'Variance', 'Covariance', 'Correlation',
+    'Combinations', 'Permutations',
+  ]},
+  { id: 'QM-4', topicId: 'quant', label: 'Probability Distributions', subs: [
+    'Z-Score', 'Confidence Interval', "Roy's Safety First Ratio",
+    'Binomial Distribution', 'Lognormal Distribution', 'Normal Distribution',
+    'Central Limit Theorem',
+  ]},
+  { id: 'QM-6', topicId: 'quant', label: 'Hypothesis Testing', subs: [
+    't-Statistic', 'z-Statistic', 'Chi-Square Test', 'F-Statistic',
+    'Type I / Type II Error', 'P-Value Interpretation',
+  ]},
+  { id: 'FI-47', topicId: 'fi', label: 'Yield Spreads', subs: [
+    'YTM', 'G-Spread', 'I-Spread', 'Z-Spread', 'OAS',
+    'Current Yield', 'Spot Rates', 'Forward Rates', 'Bootstrapping',
+  ]},
+  { id: 'FI-49', topicId: 'fi', label: 'Duration & Convexity', subs: [
+    'Modified Duration', 'Macaulay Duration', 'Effective Duration',
+    'Convexity Adjustment', 'Portfolio Duration', 'PVBP',
+    'Key Rate Duration', 'Spread Duration', 'Futures Hedge',
+  ]},
+  { id: 'FSA-19', topicId: 'fsa', label: 'Financial Ratios', subs: [
+    'Liquidity Ratios', 'Activity Ratios', 'Profitability Ratios',
+    'Leverage Ratios', 'Coverage Ratios', 'DuPont Analysis',
+    'Cash Conversion Cycle', 'Sustainable Growth',
+  ]},
+  { id: 'FSA-20', topicId: 'fsa', label: 'Inventory Analysis', subs: [
+    'COGS Formula', 'FIFO vs LIFO', 'LIFO Reserve', 'LIFO Liquidation',
+    'Weighted Average', 'NRV Adjustment', 'Inventory Write-Down',
+  ]},
+  { id: 'FSA-21', topicId: 'fsa', label: 'Long-Lived Assets', subs: [
+    'Straight-Line Depreciation', 'DDB', 'Units of Production',
+    'Gain/Loss on Disposal', 'Capitalize vs Expense',
+    'Impairment IFRS', 'Impairment GAAP', 'Average Age', 'Revaluation Model',
+  ]},
+  { id: 'DER-59', topicId: 'deriv', label: 'Forward Contracts', subs: [
+    'Forward Price', 'Forward Price with Dividends', 'Forward Value',
+    'FX Forward', 'Bond Forward', 'Equity Forward',
+    'Cost of Carry', 'Arbitrage', 'Convenience Yield',
+  ]},
+  { id: 'PM-72', topicId: 'pm', label: 'Portfolio Mathematics', subs: [
+    'Portfolio Return', 'Portfolio Variance', '3-Asset Portfolio',
+    'Sharpe Ratio', 'Diversification', 'CML', 'Minimum Variance', 'Correlation',
+  ]},
+  { id: 'PM-73', topicId: 'pm', label: 'CAPM', subs: [
+    'CAPM', 'Beta', "Jensen's Alpha", 'Treynor Ratio',
+    'M-Squared', 'SML vs CML', 'Beta Calculation', 'Market Model',
+  ]},
 ];
 window.FORMULA_FAMILIES = FORMULA_FAMILIES;
 
-// Sub-family display labels — maps exact q.chapter value → human label.
-// If not listed here, the raw id is shown (e.g. 'QM-TVM-FV' → 'QM-TVM-FV').
-const SUBFAMILY_LABELS = {
-  'QM-TVM-FV':  'Future Value',
-  'QM-TVM-PV':  'Present Value',
-  'QM-TVM-ANN': 'Annuities',
-  'QM-HT-T':    't-Test',
-};
-window.SUBFAMILY_LABELS = SUBFAMILY_LABELS;
+// Unique TOPICS ids that have at least one family entry
+const MASTERY_TOPIC_IDS = [...new Set(FORMULA_FAMILIES.map(f => f.topicId))];
 
 // ── Mastery state ─────────────────────────────────────────────────────────────
-let selectedSubFamily = null;   // exact q.chapter value e.g. 'QM-TVM-FV', or null
+let selectedSubFamily = null; // a q.topic string e.g. 'Modified Duration', or null
 
-// Returns the family entry whose id is a prefix of the given q.chapter value.
-function familyForChapter(chapterVal) {
-  if (!chapterVal) return null;
-  // Sort descending by id length so longer (more specific) prefixes match first
-  var sorted = FORMULA_FAMILIES.slice().sort((a,b) => b.id.length - a.id.length);
-  return sorted.find(function(f){ return String(chapterVal).startsWith(f.id); }) || null;
-}
-
-// Returns the topic id for a formula_drill q.chapter value, or null.
-function topicForChapter(chapterVal) {
-  var fam = familyForChapter(chapterVal);
-  return fam ? fam.topicId : null;
-}
-
-// Live list of topic ids that have ≥1 formula_drill question.
-function getMasteryTopicIds() {
-  var allQ = window.QUESTIONS_DATA || window.questions || [];
-  var set = new Set();
-  allQ.forEach(function(q){
-    if (q.questionType !== 'formula_drill') return;
-    var tid = topicForChapter(q.chapter);
-    if (tid) set.add(tid);
-  });
-  return set;
-}
-
-// Live list of FORMULA_FAMILIES entries with ≥1 question, optionally filtered to a topic.
-function getActiveFamilies(topicId) {
-  var allQ = window.QUESTIONS_DATA || window.questions || [];
-  var activeIds = new Set();
-  allQ.forEach(function(q){
-    if (q.questionType !== 'formula_drill') return;
-    var fam = familyForChapter(q.chapter);
-    if (fam && (!topicId || fam.topicId === topicId)) activeIds.add(fam.id);
-  });
-  return FORMULA_FAMILIES.filter(function(f){
-    return activeIds.has(f.id) && (!topicId || f.topicId === topicId);
-  });
-}
-
-// Live list of distinct q.chapter values (sub-families) for a given family prefix.
-// e.g. familyId='QM-TVM' → ['QM-TVM-FV','QM-TVM-PV','QM-TVM-ANN']
-function getActiveSubFamilies(familyId) {
-  var allQ = window.QUESTIONS_DATA || window.questions || [];
-  var seen = new Set();
-  allQ.forEach(function(q){
-    if (q.questionType !== 'formula_drill') return;
-    if (String(q.chapter).startsWith(familyId)) seen.add(q.chapter);
-  });
-  // Only show sub-family options if the chapter value is LONGER than the family id
-  // (i.e. has a suffix — otherwise it IS the family itself, not a sub)
-  var subs = Array.from(seen).filter(function(v){ return v.length > familyId.length; });
-  return subs.sort();
-}
-
-// Count formula_drill questions matching the current mastery selection.
-// sel = { topic, family, subFamily } — any can be null/"all"
+// Count formula_drill questions for the current mastery selection
 function getMasteryCount(sel) {
   var allQ = window.QUESTIONS_DATA || window.questions || [];
   if (!allQ.length) return null;
-  var filtered = allQ.filter(function(q){ return q.questionType === 'formula_drill'; });
+  var q = allQ.filter(function(x){ return x.questionType === 'formula_drill'; });
   if (sel.subFamily) {
-    filtered = filtered.filter(function(q){ return q.chapter === sel.subFamily; });
-  } else if (sel.family) {
-    filtered = filtered.filter(function(q){ return String(q.chapter).startsWith(sel.family); });
-  } else if (sel.topic && sel.topic !== 'all') {
-    var famIds = new Set(getActiveFamilies(sel.topic).map(function(f){ return f.id; }));
-    filtered = filtered.filter(function(q){
-      var fam = familyForChapter(q.chapter);
-      return fam && famIds.has(fam.id);
-    });
+    // sub-family filter: match q.topic
+    q = q.filter(function(x){ return x.topic === sel.subFamily; });
+  } else if (sel.family && sel.family !== 'all' && !sel.family.endsWith('-all')) {
+    // family filter: exact q.chapter match
+    q = q.filter(function(x){ return x.chapter === sel.family; });
+  } else if (sel.family && sel.family.endsWith('-all')) {
+    // all families within a topic
+    var tId = sel.family.replace('-all','');
+    var famIds = new Set(FORMULA_FAMILIES.filter(function(f){ return f.topicId === tId; }).map(function(f){ return f.id; }));
+    q = q.filter(function(x){ return famIds.has(x.chapter); });
   }
-  return filtered.length;
+  return q.length;
 }
 
 
@@ -1534,15 +1518,14 @@ function buildTopicDropdown() {
   document.getElementById('chapterLabel').textContent = masteryOn ? 'Formula Family' : 'Chapter / Reading';
 
   if (masteryOn) {
-    const topicIds = getMasteryTopicIds();
-    const topics = TOPICS.filter(t => topicIds.has(t.id));
+    const masteryTopics = TOPICS.filter(t => MASTERY_TOPIC_IDS.includes(t.id));
     const allOpt = document.createElement('option');
     allOpt.value = 'all'; allOpt.textContent = '🧮  All Formula Topics';
     sel.appendChild(allOpt);
     const sep = document.createElement('option');
     sep.disabled = true; sep.textContent = '──────────────────────────';
     sel.appendChild(sep);
-    topics.forEach(t => {
+    masteryTopics.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = t.icon + '  ' + t.label;
@@ -1584,7 +1567,7 @@ function buildChapterDropdownForTopic(topicId) {
       sel.disabled = false;
       return;
     }
-    const families = getActiveFamilies(topicId);
+    const families = FORMULA_FAMILIES.filter(f => f.topicId === topicId);
     if (!families.length) { sel.disabled = true; return; }
     const topic = TOPICS.find(t => t.id === topicId);
     const allOpt = document.createElement('option');
@@ -1631,15 +1614,15 @@ function buildChapterDropdownForTopic(topicId) {
   sel.disabled = false;
 }
 
-// Sub-family dropdown — only shown in mastery mode when a specific family is selected
+// Sub-family dropdown — built from config fam.subs (q.topic values)
 function buildSubFamilyDropdown(familyId) {
-  const subs = getActiveSubFamilies(familyId);
   const wrap = document.getElementById('subFamilyWrap');
   const label = document.getElementById('subFamilyLabel');
   const sel = document.getElementById('subFamilyDropdown');
+  const fam = FORMULA_FAMILIES.find(f => f.id === familyId);
+  const subs = (fam && fam.subs && fam.subs.length) ? fam.subs : [];
 
   if (!subs.length) {
-    // No subs — hide the dropdown, family itself is the finest granularity
     wrap.style.display = 'none';
     label.style.display = 'none';
     sel.disabled = true;
@@ -1651,18 +1634,17 @@ function buildSubFamilyDropdown(familyId) {
   sel.innerHTML = '';
   sel.disabled = false;
 
-  const fam = FORMULA_FAMILIES.find(f => f.id === familyId);
   const allOpt = document.createElement('option');
-  allOpt.value = familyId + '-all';
-  allOpt.textContent = '🧮  All ' + (fam ? fam.label : familyId);
+  allOpt.value = '';
+  allOpt.textContent = '🧮  All ' + (fam ? fam.label : familyId) + ' Sub-topics';
   sel.appendChild(allOpt);
   const sep = document.createElement('option');
   sep.disabled = true; sep.textContent = '──────────────────────────';
   sel.appendChild(sep);
-  subs.forEach(function(sv) {
+  subs.forEach(function(subTopic) {
     const opt = document.createElement('option');
-    opt.value = sv;
-    opt.textContent = '🔹  ' + (window.SUBFAMILY_LABELS[sv] || sv);
+    opt.value = subTopic;   // this is the q.topic value used for filtering
+    opt.textContent = '🔹  ' + subTopic;
     sel.appendChild(opt);
   });
 }
@@ -1697,11 +1679,7 @@ function selectChapter(id) {
 }
 
 function selectSubFamily(val) {
-  if (!val || val.endsWith('-all')) {
-    selectedSubFamily = null;
-  } else {
-    selectedSubFamily = val;
-  }
+  selectedSubFamily = val || null; // empty string ('All') → null = no sub-filter
   updatePreview();
   updateStartBtn();
 }
@@ -1735,10 +1713,9 @@ function updatePreview() {
   }
 
   if (masteryOn) {
-    // Build label from most-specific selection
     var chLabel;
     if (selectedSubFamily) {
-      chLabel = (window.SUBFAMILY_LABELS[selectedSubFamily] || selectedSubFamily);
+      chLabel = selectedSubFamily; // q.topic string, already human-readable
     } else if (!selectedChapter || selectedChapter === 'all') {
       chLabel = 'All Formula Topics';
     } else if (selectedChapter.endsWith('-all')) {
@@ -1748,8 +1725,8 @@ function updatePreview() {
       var fam = FORMULA_FAMILIES.find(function(f){ return f.id === selectedChapter; });
       chLabel = fam ? fam.label : selectedChapter;
     }
-    var sel = { topic: selectedTopic, family: selectedChapter, subFamily: selectedSubFamily };
-    var mCount = getMasteryCount(sel);
+    var mSel = { family: selectedChapter, subFamily: selectedSubFamily };
+    var mCount = getMasteryCount(mSel);
     document.getElementById('previewChapter').textContent = '🧮 ' + chLabel;
     document.getElementById('previewCount').textContent = mCount !== null ? mCount + " formula Q's" : '—';
     document.getElementById('previewTime').textContent = (mCount !== null && mCount > 0) ? '~' + Math.round(mCount * 1.5) + ' min' : '—';
@@ -2222,24 +2199,21 @@ function FinanceExamApp() {
                           return;
                         }
 
-                        // Mastery mode — formula_drill questions only, with 3-level filter
+                        // Mastery mode — formula_drill questions, filtered by chapter + optional topic
                         if (config.masteryMode) {
                           let fdFiltered = data.filter(q => q.questionType === 'formula_drill');
                           if (config.subFamily) {
-                            // Most specific: exact sub-family e.g. 'QM-TVM-FV'
-                            fdFiltered = fdFiltered.filter(q => q.chapter === config.subFamily);
+                            // Most specific: filter by q.topic (sub-topic string e.g. 'Modified Duration')
+                            fdFiltered = fdFiltered.filter(q => q.topic === config.subFamily);
                           } else if (config.chapter && config.chapter !== 'all') {
                             if (config.chapter.endsWith('-all')) {
-                              // All families within a topic
+                              // All families within a topic (e.g. 'quant-all')
                               const topicId = config.chapter.replace('-all', '');
                               const famIds = new Set((window.FORMULA_FAMILIES || []).filter(f => f.topicId === topicId).map(f => f.id));
-                              fdFiltered = fdFiltered.filter(q => {
-                                const fam = (window.FORMULA_FAMILIES || []).find(f => String(q.chapter).startsWith(f.id));
-                                return fam && famIds.has(fam.id);
-                              });
+                              fdFiltered = fdFiltered.filter(q => famIds.has(q.chapter));
                             } else {
-                              // Specific family prefix e.g. 'QM-TVM'
-                              fdFiltered = fdFiltered.filter(q => String(q.chapter).startsWith(config.chapter));
+                              // Specific family: exact q.chapter match (e.g. 'QM-1', 'FI-49')
+                              fdFiltered = fdFiltered.filter(q => q.chapter === config.chapter);
                             }
                           }
                           if (fdFiltered.length === 0) {
