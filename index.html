@@ -1446,8 +1446,8 @@ const FORMULA_DRILL_CHAPTER_IDS = new Set([
 // subs[]  = distinct q.topic values (drives 3rd Sub-topic dropdown)
 const FORMULA_FAMILIES = [
   { id: 'QM-1',   topicId: 'quant', label: 'Time Value of Money', subs: [
-    'Future Value', 'Present Value', 'Annuity', 'Perpetuity',
-    'Effective Annual Rate', 'NPV', 'Compounding',
+    'Future Value', 'Present Value', 'Annuity Due', 'FV of Annuity',
+    'Perpetuity', 'Effective Annual Rate', 'NPV', 'Compounding Frequency Impact',
   ]},
   { id: 'QM-3',   topicId: 'quant', label: 'Probability Concepts', subs: [
     'Addition Rule', 'Multiplication Rule', 'Conditional Probability',
@@ -1457,7 +1457,7 @@ const FORMULA_FAMILIES = [
   { id: 'QM-4',   topicId: 'quant', label: 'Probability Distributions', subs: [
     'Z-Score', 'Confidence Interval', "Roy's Safety First Ratio",
     'Binomial Distribution', 'Lognormal Distribution',
-    'Normal Distribution', 'Central Limit Theorem',
+    'Normal Distribution Properties', 'Central Limit Theorem',
   ]},
   { id: 'QM-6',   topicId: 'quant', label: 'Hypothesis Testing', subs: [
     't-Statistic', 'z-Statistic', 'Chi-Square Test', 'F-Statistic',
@@ -2212,66 +2212,24 @@ function FinanceExamApp() {
                         const config = window.EXAM_CONFIG || { chapter: 'all', shuffle: false };
                         let filtered = data;
 
-                        if (config.chapter && config.chapter !== 'all') {
-                          // Build lookup: chapter UI id -> chapter label (e.g. 'qm-1' -> 'Rates and Returns')
-                          const allTopicChapters = Object.values(window.TOPICS_REF || {}).flat();
-                          const idToLabel = {};
-                          allTopicChapters.forEach(ch => { idToLabel[ch.id] = ch.label; });
-
-                          if (config.chapter.endsWith('-all')) {
-                            // All chapters within a topic e.g. 'quant-all'
-                            const topicId = config.chapter.replace('-all', '');
-                            const topicChapters = (window.TOPICS_REF[topicId] || []);
-                            const validLabels = new Set(topicChapters.map(ch => ch.label));
-                            const validIds = new Set(topicChapters.map(ch => ch.id));
-                            // Also build id->mapped value from CHAPTER_ID_MAP
-                            const idMap = window.CHAPTER_ID_MAP || {};
-                            const validMapped = new Set(topicChapters.map(ch => idMap[ch.id]).filter(Boolean));
-                            filtered = data.filter(q => validLabels.has(q.chapterName) || validIds.has(q.chapter) || validMapped.has(String(q.chapter)));
-                          } else {
-                            // Single chapter -- match by chapter id, chapterName label, or mapped id
-                            const targetLabel = idToLabel[config.chapter];
-                            const idMap = window.CHAPTER_ID_MAP || {};
-                            const mappedId = idMap[config.chapter];
-                            filtered = data.filter(q => {
-                              if (targetLabel && q.chapterName === targetLabel) return true;
-                              if (String(q.chapter) === String(config.chapter)) return true;
-                              if (mappedId && String(q.chapter) === String(mappedId)) return true;
-                              return false;
-                            });
-                          }
-                        }
-
-                        if (filtered.length === 0) {
-                          setLoadError('No questions found for the selected chapter. Please go back and choose a different selection.');
-                          setIsLoadingQuestions(false);
-                          return;
-                        }
-
-                        // Formula Drill Only mode — restrict to formula_drill question type
-                        if (config.formulaDrillOnly) {
-                          filtered = filtered.filter(q => q.questionType === 'formula_drill');
-                          if (filtered.length === 0) {
-                            setLoadError('No formula-drill questions found for this chapter.');
-                            setIsLoadingQuestions(false);
-                            return;
-                          }
-                        }
-
-                        // Mastery mode — formula_drill questions only, with 3-level filter
+                        // ── Mastery mode: filter formula_drill directly from full data ──
+                        // (skips the chapter pre-filter which would block families like FI-47/FSA-19
+                        //  that don't share chapter codes with regular questions)
                         if (config.masteryMode) {
                           let fdFiltered = data.filter(q => q.questionType === 'formula_drill');
                           if (config.subFamily) {
-                            // Most specific: exact sub-family e.g. 'QM-TVM-FV'
-                            fdFiltered = fdFiltered.filter(q => q.topic === config.subFamily);
+                            // Sub-family: fuzzy match so minor label differences don't break it
+                            const sf = config.subFamily.toLowerCase();
+                            fdFiltered = fdFiltered.filter(q => {
+                              const t = (q.topic || '').toLowerCase();
+                              return t === sf || t.startsWith(sf) || t.includes(sf);
+                            });
                           } else if (config.chapter && config.chapter !== 'all') {
                             if (config.chapter.endsWith('-all')) {
-                              // All families within a topic
                               const topicId = config.chapter.replace('-all', '');
                               const famIds = new Set((window.FORMULA_FAMILIES || []).filter(f => f.topicId === topicId).map(f => f.id));
                               fdFiltered = fdFiltered.filter(q => famIds.has(q.chapter));
                             } else {
-                              // Specific family prefix e.g. 'QM-TVM'
                               fdFiltered = fdFiltered.filter(q => q.chapter === config.chapter);
                             }
                           }
@@ -2281,6 +2239,50 @@ function FinanceExamApp() {
                             return;
                           }
                           filtered = fdFiltered;
+
+                        } else {
+                          // ── Normal / Formula-Drill-Only mode: chapter pre-filter ──
+                          if (config.chapter && config.chapter !== 'all') {
+                            const allTopicChapters = Object.values(window.TOPICS_REF || {}).flat();
+                            const idToLabel = {};
+                            allTopicChapters.forEach(ch => { idToLabel[ch.id] = ch.label; });
+
+                            if (config.chapter.endsWith('-all')) {
+                              const topicId = config.chapter.replace('-all', '');
+                              const topicChapters = (window.TOPICS_REF[topicId] || []);
+                              const validLabels = new Set(topicChapters.map(ch => ch.label));
+                              const validIds = new Set(topicChapters.map(ch => ch.id));
+                              const idMap = window.CHAPTER_ID_MAP || {};
+                              const validMapped = new Set(topicChapters.map(ch => idMap[ch.id]).filter(Boolean));
+                              filtered = data.filter(q => validLabels.has(q.chapterName) || validIds.has(q.chapter) || validMapped.has(String(q.chapter)));
+                            } else {
+                              const targetLabel = idToLabel[config.chapter];
+                              const idMap = window.CHAPTER_ID_MAP || {};
+                              const mappedId = idMap[config.chapter];
+                              filtered = data.filter(q => {
+                                if (targetLabel && q.chapterName === targetLabel) return true;
+                                if (String(q.chapter) === String(config.chapter)) return true;
+                                if (mappedId && String(q.chapter) === String(mappedId)) return true;
+                                return false;
+                              });
+                            }
+                          }
+
+                          if (filtered.length === 0) {
+                            setLoadError('No questions found for the selected chapter. Please go back and choose a different selection.');
+                            setIsLoadingQuestions(false);
+                            return;
+                          }
+
+                          // Formula Drill Only mode — restrict to formula_drill question type
+                          if (config.formulaDrillOnly) {
+                            filtered = filtered.filter(q => q.questionType === 'formula_drill');
+                            if (filtered.length === 0) {
+                              setLoadError('No formula-drill questions found for this chapter.');
+                              setIsLoadingQuestions(false);
+                              return;
+                            }
+                          }
                         }
 
                         let active = config.shuffle ? shuffleArray(filtered) : filtered;
