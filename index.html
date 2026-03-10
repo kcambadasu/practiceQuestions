@@ -1257,6 +1257,9 @@ const TOPICS = [
       { id:'fsa-10', label:'Financial Reporting Quality',                           sub:'R·10', count:65,  available:true },
       { id:'fsa-11', label:'Financial Analysis Techniques',                         sub:'R·11', count:110, available:true },
       { id:'fsa-12', label:'Introduction to Financial Statement Modeling',          sub:'R·12', count:65,  available:true },
+      { id:'fsa-fd-19', label:'🧮 Financial Ratios · Formula Drill',  sub:'FD·19', count:100, available:true, formulaDrill:true },
+      { id:'fsa-fd-20', label:'🧮 Inventories · Formula Drill',       sub:'FD·20', count:80,  available:true, formulaDrill:true },
+      { id:'fsa-fd-21', label:'🧮 Long-Lived Assets · Formula Drill', sub:'FD·21', count:80,  available:true, formulaDrill:true },
     ]
   },
   {
@@ -1273,6 +1276,10 @@ const TOPICS = [
       { id:'qm-9',  label:'Parametric and Non-Parametric Tests of Independence',   sub:'R·09', count:40,  available:true },
       { id:'qm-10', label:'Simple Linear Regression',                              sub:'R·10', count:110, available:true },
       { id:'qm-11', label:'Introduction to Big Data Techniques',                   sub:'R·11', count:30,  available:true },
+      { id:'qm-fd-1',  label:'🧮 TVM · Formula Drill',               sub:'FD·01', count:100, available:true, formulaDrill:true },
+      { id:'qm-fd-3',  label:'🧮 Probability · Formula Drill',        sub:'FD·03', count:75,  available:true, formulaDrill:true },
+      { id:'qm-fd-4',  label:'🧮 Distributions · Formula Drill',      sub:'FD·04', count:75,  available:true, formulaDrill:true },
+      { id:'qm-fd-6',  label:'🧮 Hypothesis Testing · Formula Drill', sub:'FD·06', count:70,  available:true, formulaDrill:true },
     ]
   },
   {
@@ -1331,6 +1338,8 @@ const TOPICS = [
       { id:'fi-17', label:'Fixed-Income Securitization',                                   sub:'R·13', count:70,  available:true },
       { id:'fi-18', label:'Asset-Backed Security (ABS) Instrument and Market Features',    sub:'R·14', count:50,  available:true },
       { id:'fi-19', label:'Mortgage-Backed Security (MBS) Instrument and Market Features', sub:'R·15', count:50,  available:true },
+      { id:'fi-fd-47', label:'🧮 Yield Spreads · Formula Drill',           sub:'FD·47', count:80,  available:true, formulaDrill:true },
+      { id:'fi-fd-49', label:'🧮 Duration & Convexity · Formula Drill',    sub:'FD·49', count:100, available:true, formulaDrill:true },
     ]
   },
   {
@@ -1346,6 +1355,7 @@ const TOPICS = [
       { id:'dv-8',  label:'Pricing and Valuation of Options',                                       sub:'R·08', count:95,  available:true },
       { id:'dv-9',  label:'Option Replication Using Put–Call Parity',                                sub:'R·09', count:50,  available:true },
       { id:'dv-10', label:'Valuing a Derivative Using a One-Period Binomial Model',                  sub:'R·10', count:50,  available:true },
+      { id:'dv-fd-59', label:'🧮 Forward Contracts · Formula Drill', sub:'FD·59', count:70, available:true, formulaDrill:true },
     ]
   },
   {
@@ -1369,6 +1379,8 @@ const TOPICS = [
       { id:'pm-4',  label:'Basics of Portfolio Planning and Construction',  sub:'R·04', count:250, available:true },
       { id:'pm-5',  label:'The Behavioral Biases of Individuals',          sub:'R·05', count:105, available:true },
       { id:'pm-6',  label:'Introduction to Risk Management',               sub:'R·06', count:185, available:true },
+      { id:'pm-fd-72', label:'🧮 Portfolio Math · Formula Drill', sub:'FD·72', count:80, available:true, formulaDrill:true },
+      { id:'pm-fd-73', label:'🧮 CAPM · Formula Drill',          sub:'FD·73', count:80, available:true, formulaDrill:true },
     ]
   },
   {
@@ -1410,7 +1422,22 @@ window.CHAPTER_ID_MAP = {
   'ai-1':'AI-1','ai-2':'AI-2','ai-3':'AI-3','ai-4':'AI-4','ai-5':'AI-5','ai-6':'AI-6','ai-7':'AI-7',
   'pm-1':'PM-1','pm-2':'PM-2','pm-3':'PM-3','pm-4':'PM-4','pm-5':'PM-5','pm-6':'PM-6',
   'ep-1':'EP-1','ep-2':'EP-2','ep-3':'EP-3','ep-4':'EP-4','ep-5':'EP-5',
+  // ── Formula Drill chapter mappings ──
+  'qm-fd-1':'QM-1',  'qm-fd-3':'QM-3',  'qm-fd-4':'QM-4',  'qm-fd-6':'QM-6',
+  'fsa-fd-19':'FSA-19','fsa-fd-20':'FSA-20','fsa-fd-21':'FSA-21',
+  'fi-fd-47':'FI-47', 'fi-fd-49':'FI-49',
+  'dv-fd-59':'DER-59',
+  'pm-fd-72':'PM-72', 'pm-fd-73':'PM-73',
 };
+
+// Set of chapter UI ids that are dedicated formula-drill chapters
+const FORMULA_DRILL_CHAPTER_IDS = new Set([
+  'qm-fd-1','qm-fd-3','qm-fd-4','qm-fd-6',
+  'fsa-fd-19','fsa-fd-20','fsa-fd-21',
+  'fi-fd-47','fi-fd-49',
+  'dv-fd-59',
+  'pm-fd-72','pm-fd-73',
+]);
 
 // ── Formula Family Registry ───────────────────────────────────────────────────
 // id      = exact q.chapter value in questions.js
@@ -1601,13 +1628,30 @@ function buildChapterDropdownForTopic(topicId) {
   const sep = document.createElement('option');
   sep.disabled = true; sep.textContent = '──────────────────────────';
   sel.appendChild(sep);
-  topic.chapters.forEach(ch => {
+
+  const regularChapters = topic.chapters.filter(ch => !ch.formulaDrill);
+  const drillChapters   = topic.chapters.filter(ch =>  ch.formulaDrill);
+
+  regularChapters.forEach(ch => {
     const opt = document.createElement('option');
     opt.value = ch.id;
     opt.disabled = !ch.available;
     opt.textContent = ch.sub + '  ' + ch.label + (!ch.available ? '  (Coming Soon)' : '');
     sel.appendChild(opt);
   });
+
+  if (drillChapters.length) {
+    const drillSep = document.createElement('option');
+    drillSep.disabled = true; drillSep.textContent = '── 🧮 Formula Drill ───────────';
+    sel.appendChild(drillSep);
+    drillChapters.forEach(ch => {
+      const opt = document.createElement('option');
+      opt.value = ch.id;
+      opt.textContent = ch.sub + '  ' + ch.label;
+      sel.appendChild(opt);
+    });
+  }
+
   sel.disabled = false;
 }
 
@@ -1742,7 +1786,11 @@ function updatePreview() {
     if (t) { label = 'All ' + t.label; count = t.chapters.filter(c=>c.available).reduce((s,c)=>s+c.count,0); }
   } else {
     const ch = allChapters().find(c => c.id === selectedChapter);
-    if (ch) { label = ch.sub + ' · ' + ch.label.split(' ').slice(0,4).join(' ') + (ch.label.split(' ').length > 4 ? '…' : ''); count = ch.count; }
+    if (ch) {
+      const shortLabel = ch.label.replace('🧮 ', '').split(' · ')[0];
+      label = (ch.formulaDrill ? '🧮 ' : '') + ch.sub + ' · ' + shortLabel;
+      count = ch.count;
+    }
   }
   document.getElementById('previewChapter').textContent = label;
   document.getElementById('previewCount').textContent = count > 0 ? count + ' questions' : '—';
@@ -1761,7 +1809,8 @@ function updateStartBtn() {
     chapter: selectedChapter || 'all',
     subFamily: selectedSubFamily || null,
     shuffle: shuffleOn,
-    masteryMode: masteryOn
+    masteryMode: masteryOn,
+    formulaDrillOnly: FORMULA_DRILL_CHAPTER_IDS.has(selectedChapter)
   };
   btn.href = '#';
   btn.onclick = function(e) { e.preventDefault(); launchExam(); };
@@ -1773,7 +1822,8 @@ function launchExam() {
       chapter: selectedChapter || 'all',
       subFamily: selectedSubFamily || null,
       shuffle: shuffleOn,
-      masteryMode: masteryOn
+      masteryMode: masteryOn,
+      formulaDrillOnly: FORMULA_DRILL_CHAPTER_IDS.has(selectedChapter)
     };
     // Show exam panel
     document.getElementById('homePanel').classList.add('hidden');
@@ -2196,6 +2246,16 @@ function FinanceExamApp() {
                           setLoadError('No questions found for the selected chapter. Please go back and choose a different selection.');
                           setIsLoadingQuestions(false);
                           return;
+                        }
+
+                        // Formula Drill Only mode — restrict to formula_drill question type
+                        if (config.formulaDrillOnly) {
+                          filtered = filtered.filter(q => q.questionType === 'formula_drill');
+                          if (filtered.length === 0) {
+                            setLoadError('No formula-drill questions found for this chapter.');
+                            setIsLoadingQuestions(false);
+                            return;
+                          }
                         }
 
                         // Mastery mode — formula_drill questions only, with 3-level filter
