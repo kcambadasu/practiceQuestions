@@ -809,7 +809,8 @@ footer{
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
            signInWithPopup, GoogleAuthProvider, signOut, updateProfile, sendPasswordResetEmail }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp }
+  import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp,
+           addDoc, collection, query, orderBy, limit, getDocs }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -834,7 +835,8 @@ footer{
   window._fbFns  = {
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signInWithPopup, signOut, updateProfile, sendPasswordResetEmail,
-    doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp
+    doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp,
+    addDoc, collection, query, orderBy, limit, getDocs
   };
 
   // ── Auth state listener ──
@@ -947,6 +949,10 @@ footer{
         <div class="dash-stat"><div class="dash-stat-num" id="dStatAcc">—</div><div class="dash-stat-label">Overall Accuracy</div></div>
         <div class="dash-stat"><div class="dash-stat-num" id="dStatSessions">0</div><div class="dash-stat-label">Sessions</div></div>
         <div class="dash-stat"><div class="dash-stat-num" id="dStatChapters">0</div><div class="dash-stat-label">Chapters Attempted</div></div>
+        <div class="dash-stat"><div class="dash-stat-num gold" id="dStatLastScore">—</div><div class="dash-stat-label">Last Score</div></div>
+      </div>
+      <div id="dashLastScoreDetail" style="display:none;margin-top:10px;font-size:.78rem;color:rgba(255,255,255,.45)">
+        <span id="dashLastScoreChapter"></span> &middot; <span id="dashLastScoreDate"></span>
       </div>
     </div>
   </div>
@@ -2196,6 +2202,9 @@ function FinanceExamApp() {
             const [eliminatedOptions, setEliminatedOptions] = useState({});
             const [showResults, setShowResults] = useState(false);
             const [timeElapsed, setTimeElapsed] = useState(0);
+            const [answerSubmitted, setAnswerSubmitted] = useState(false);
+            const [isCorrect, setIsCorrect] = useState(null);
+            const [liveScore, setLiveScore] = useState(0);
 
 
             // Load and auto-start from home page config
@@ -2296,6 +2305,9 @@ function FinanceExamApp() {
                         setEliminatedOptions({});
                         setShowResults(false);
                         setTimeElapsed(0);
+                        setAnswerSubmitted(false);
+                        setIsCorrect(null);
+                        setLiveScore(0);
 
                         const chapters = new Set(data.map(q => String(q.chapter)));
                         setSelectedChapters(chapters);
@@ -2319,6 +2331,45 @@ function FinanceExamApp() {
                 }
             }, [examStarted, showResults]);
 
+            // Save activity to Firestore when results are shown
+            useEffect(() => {
+                if (!showResults || questions.length === 0) return;
+                const scoreData = (() => {
+                    let correct = 0;
+                    questions.forEach(q => {
+                        if (answers[q.id] && answers[q.id].selected === q.correctAnswer) correct++;
+                    });
+                    return correct;
+                })();
+                const totalQ = questions.length;
+                const scorePct = Math.round(scoreData / totalQ * 100);
+                const chapterSet = new Set(questions.map(q => q.chapterName).filter(Boolean));
+                const chapterLabel = chapterSet.size === 1 ? [...chapterSet][0] : (chapterSet.size === 0 ? 'Mixed Chapters' : 'Mixed Chapters');
+                const mode = (window.EXAM_CONFIG && window.EXAM_CONFIG.dailyChallenge) ? 'Daily Challenge' : 'Practice by Chapter';
+                if (window._saveActivity) {
+                    window._saveActivity({
+                        mode,
+                        chapter: chapterLabel,
+                        totalQuestions: totalQ,
+                        correctAnswers: scoreData,
+                        score: scoreData,
+                        scorePercent: scorePct,
+                        durationSeconds: timeElapsed
+                    });
+                }
+                // Also patch data attributes for legacy session save observer
+                if (window._saveSession) {
+                    const answered = Object.keys(answers).length;
+                    window._saveSession({
+                        chapter: chapterLabel,
+                        score: scorePct,
+                        answered,
+                        correct: scoreData,
+                        date: new Date().toISOString()
+                    });
+                }
+            }, [showResults]);
+
             const formatTime = (seconds) => {
                 const hrs = Math.floor(seconds / 3600);
                 const mins = Math.floor((seconds % 3600) / 60);
@@ -2336,7 +2387,8 @@ function FinanceExamApp() {
             };
 
             const handleConfirm = () => {
-                if (selectedAnswer) {
+                if (selectedAnswer && !answerSubmitted) {
+                    const correct = selectedAnswer === currentQuestion.correctAnswer;
                     const newAnswers = {
                         ...answers,
                         [currentQuestion.id]: {
@@ -2345,19 +2397,20 @@ function FinanceExamApp() {
                         }
                     };
                     setAnswers(newAnswers);
+                    setIsCorrect(correct);
+                    setAnswerSubmitted(true);
+                    if (correct) setLiveScore(prev => prev + 1);
+                }
+            };
 
-                    if (currentQuestionIndex < totalQuestions - 1) {
-                        // Auto-advance to next question
-                        setTimeout(() => {
-                            setCurrentQuestionIndex(currentQuestionIndex + 1);
-                            setSelectedAnswer('');
-                        }, 200);
-                    } else {
-                        // Last question — go straight to results
-                        setTimeout(() => {
-                            setShowResults(true);
-                        }, 350);
-                    }
+            const handleNextQuestion = () => {
+                setAnswerSubmitted(false);
+                setIsCorrect(null);
+                if (currentQuestionIndex < totalQuestions - 1) {
+                    setCurrentQuestionIndex(currentQuestionIndex + 1);
+                    setSelectedAnswer('');
+                } else {
+                    setShowResults(true);
                 }
             };
 
@@ -2366,6 +2419,16 @@ function FinanceExamApp() {
                     setCurrentQuestionIndex(currentQuestionIndex - 1);
                     const prevAnswer = answers[questions[currentQuestionIndex - 1].id];
                     setSelectedAnswer(prevAnswer?.selected || '');
+                    // If previously answered, show feedback; otherwise reset
+                    const prevQ = questions[currentQuestionIndex - 1];
+                    const prevAns = answers[prevQ?.id];
+                    if (prevAns) {
+                        setAnswerSubmitted(true);
+                        setIsCorrect(prevAns.selected === prevQ.correctAnswer);
+                    } else {
+                        setAnswerSubmitted(false);
+                        setIsCorrect(null);
+                    }
                 }
             };
 
@@ -2374,6 +2437,16 @@ function FinanceExamApp() {
                     setCurrentQuestionIndex(currentQuestionIndex + 1);
                     const nextAnswer = answers[questions[currentQuestionIndex + 1].id];
                     setSelectedAnswer(nextAnswer?.selected || '');
+                    // If next question was already answered, show its feedback; otherwise reset
+                    const nextQ = questions[currentQuestionIndex + 1];
+                    const nextAns = answers[nextQ?.id];
+                    if (nextAns) {
+                        setAnswerSubmitted(true);
+                        setIsCorrect(nextAns.selected === nextQ.correctAnswer);
+                    } else {
+                        setAnswerSubmitted(false);
+                        setIsCorrect(null);
+                    }
                 }
             };
 
@@ -2525,6 +2598,9 @@ const handleChapterSelection = (value) => {
                 setEliminatedOptions({});
                 setShowResults(false);
                 setTimeElapsed(0);
+                setAnswerSubmitted(false);
+                setIsCorrect(null);
+                setLiveScore(0);
                 setLoadError('');
             };
 
@@ -2731,6 +2807,12 @@ if (examStarted && questions.length === 0) {
                 const analysisByDifficulty = getAnalysisByDifficulty();
                 const analysisByChapter = getAnalysisByChapter();
                 const passed = parseFloat(score.percentage) >= 70;
+                const scorePct = parseFloat(score.percentage);
+                const verdictBadge = scorePct >= 70
+                    ? { label: 'Pass', bg: '#16a34a', color: '#fff' }
+                    : scorePct >= 50
+                        ? { label: 'Borderline', bg: '#d97706', color: '#fff' }
+                        : { label: 'Needs Work', bg: '#dc2626', color: '#fff' };
 
                 const difficultyMeta = {
                     Easy:     { bar: '#1a7a4a', badge: { bg: '#e8f7ef', color: '#1a5c3a' } },
@@ -2820,15 +2902,17 @@ if (examStarted && questions.length === 0) {
                                     {/* Big score circle */}
                                     <div style={{ textAlign:'center', flexShrink:0 }}>
                                         <div style={{ width:160, height:160, borderRadius:'50%', background:'rgba(201,168,76,.12)', border:'2px solid rgba(201,168,76,.3)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', boxShadow:'0 0 48px rgba(201,168,76,.15)' }}>
-                                            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'3rem', fontWeight:700, color:'#e8c97a', lineHeight:1 }}>{score.percentage}%</div>
-                                            <div style={{ fontSize:'.65rem', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.4)', marginTop:6 }}>Score</div>
+                                            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'2.2rem', fontWeight:700, color:'#e8c97a', lineHeight:1 }}>{score.correct} / {questions.length}</div>
+                                            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.3rem', fontWeight:600, color:'rgba(255,255,255,.7)', lineHeight:1.2 }}>({score.percentage}%)</div>
+                                            <div style={{ fontSize:'.6rem', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.4)', marginTop:6 }}>Final Score</div>
                                         </div>
                                         {/* progress arc bar */}
                                         <div style={{ marginTop:14, width:160, height:6, background:'rgba(255,255,255,.1)', borderRadius:3, overflow:'hidden' }}>
                                             <div style={{ height:'100%', width:`${score.percentage}%`, background:'linear-gradient(90deg,#c9a84c,#e8c97a)', borderRadius:3, transition:'width 1s ease' }} />
                                         </div>
-                                        <div style={{ marginTop:6, fontSize:'.7rem', color:'rgba(255,255,255,.3)', letterSpacing:'.06em' }}>
-                                            {passed ? '✓ ABOVE THRESHOLD' : '↑ TARGET: 70%'}
+                                        {/* Verdict badge */}
+                                        <div style={{ marginTop:10, display:'inline-block', background: verdictBadge.bg, color: verdictBadge.color, padding:'4px 18px', borderRadius:20, fontSize:'.75rem', fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase' }}>
+                                            {verdictBadge.label}
                                         </div>
                                     </div>
                                 </div>
@@ -3039,6 +3123,11 @@ if (examStarted && questions.length === 0) {
                                 </div>
                                 <div style={{ width:1, height:28, background:'rgba(255,255,255,.1)' }} />
                                 <div style={{ textAlign:'center' }}>
+                                    <div style={{ fontSize:'.58rem', fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.35)' }}>Score</div>
+                                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:'1.1rem', fontWeight:700, color:'#e8c97a', lineHeight:1 }}>{liveScore}<span style={{ color:'rgba(255,255,255,.3)', fontSize:'.8rem' }}>/{answeredCount}</span></div>
+                                </div>
+                                <div style={{ width:1, height:28, background:'rgba(255,255,255,.1)' }} />
+                                <div style={{ textAlign:'center' }}>
                                     <div style={{ fontSize:'.58rem', fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.35)' }}>Question</div>
                                     <div style={{ fontFamily:"'DM Mono',monospace", fontSize:'1.1rem', fontWeight:700, color:'#fff', lineHeight:1 }}>{currentQuestionIndex + 1}<span style={{ color:'rgba(255,255,255,.3)', fontSize:'.8rem' }}>/{totalQuestions}</span></div>
                                 </div>
@@ -3094,7 +3183,7 @@ if (examStarted && questions.length === 0) {
                                     const isCurrent  = i === currentQuestionIndex;
                                     const isFlagged  = markedForReview.has(q.id);
                                     return (
-                                        <div key={i} onClick={() => { setCurrentQuestionIndex(i); setSelectedAnswer(answers[questions[i].id]?.selected || ''); }}
+                                        <div key={i} onClick={() => { const tq = questions[i]; const ta = answers[tq?.id]; setCurrentQuestionIndex(i); setSelectedAnswer(ta?.selected || ''); if (ta) { setAnswerSubmitted(true); setIsCorrect(ta.selected === tq.correctAnswer); } else { setAnswerSubmitted(false); setIsCorrect(null); } }}
                                             style={{ width:20, height:20, borderRadius:4, cursor:'pointer', fontSize:'.55rem', fontWeight:700, fontFamily:"'DM Mono',monospace", display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .12s',
                                                 background: isCurrent ? '#0f1e3c' : isFlagged ? '#f7f0dc' : isAnswered ? '#e8f7ef' : '#fff',
                                                 color: isCurrent ? '#e8c97a' : isFlagged ? '#a07c30' : isAnswered ? '#1a5c3a' : '#9a9aaa',
@@ -3140,22 +3229,40 @@ if (examStarted && questions.length === 0) {
                                 </p>
 
                                 {/* Options */}
-                                <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
+                                <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
                                     {currentQuestion.options.map((option, idx) => {
                                         const letter = String.fromCharCode(65 + idx);
                                         const isSelected   = selectedAnswer === letter;
                                         const isEliminated = eliminatedOptions[`${currentQuestion.id}-${letter}`];
+                                        const isCorrectOpt = letter === currentQuestion.correctAnswer;
+                                        const isWrongSelected = answerSubmitted && isSelected && !isCorrectOpt;
+                                        const showCorrect = answerSubmitted && isCorrectOpt;
+                                        const isDimmed = answerSubmitted && !isSelected && !isCorrectOpt;
+                                        let optBg = isSelected ? 'linear-gradient(135deg,#0f1e3c,#1a2f5a)' : isEliminated ? '#faf8f3' : '#fff';
+                                        let optBorder = isSelected ? '2px solid #0f1e3c' : isEliminated ? '1px solid #eceae4' : '1px solid #ddd8cc';
+                                        let optColor = isSelected ? '#fff' : isEliminated ? '#a0a0b0' : '#1a1a2e';
+                                        let letterBg = isSelected ? 'rgba(201,168,76,.25)' : '#f0ede8';
+                                        let letterColor = isSelected ? '#e8c97a' : '#5a5a7a';
+                                        if (showCorrect) {
+                                            optBg = '#16a34a'; optBorder = '2px solid #15803d';
+                                            optColor = '#fff'; letterBg = 'rgba(255,255,255,.25)'; letterColor = '#fff';
+                                        } else if (isWrongSelected) {
+                                            optBg = '#dc2626'; optBorder = '2px solid #b91c1c';
+                                            optColor = '#fff'; letterBg = 'rgba(255,255,255,.25)'; letterColor = '#fff';
+                                        }
                                         return (
                                             <div
                                                 key={idx}
-                                                onClick={() => !isEliminated && handleAnswerSelect(letter)}
+                                                onClick={() => !isEliminated && !answerSubmitted && handleAnswerSelect(letter)}
                                                 style={{
                                                     display:'flex', alignItems:'center', gap:14,
-                                                    padding:'14px 18px', borderRadius:12, cursor: isEliminated ? 'default' : 'pointer',
-                                                    border: isSelected ? '2px solid #0f1e3c' : isEliminated ? '1px solid #eceae4' : '1px solid #ddd8cc',
-                                                    background: isSelected ? 'linear-gradient(135deg,#0f1e3c,#1a2f5a)' : isEliminated ? '#faf8f3' : '#fff',
-                                                    boxShadow: isSelected ? '0 4px 16px rgba(15,30,60,.2)' : '0 1px 4px rgba(15,30,60,.05)',
-                                                    transition:'all .18s', opacity: isEliminated ? .45 : 1,
+                                                    padding:'14px 18px', borderRadius:12,
+                                                    cursor: answerSubmitted ? 'default' : isEliminated ? 'default' : 'pointer',
+                                                    border: optBorder,
+                                                    background: optBg,
+                                                    boxShadow: (isSelected || showCorrect) ? '0 4px 16px rgba(15,30,60,.2)' : '0 1px 4px rgba(15,30,60,.05)',
+                                                    transition:'all .18s',
+                                                    opacity: isEliminated ? .45 : isDimmed ? .5 : 1,
                                                 }}
                                             >
                                                 {/* Letter badge */}
@@ -3163,46 +3270,84 @@ if (examStarted && questions.length === 0) {
                                                     width:36, height:36, borderRadius:8, flexShrink:0,
                                                     display:'flex', alignItems:'center', justifyContent:'center',
                                                     fontFamily:"'DM Mono',monospace", fontSize:'.88rem', fontWeight:700,
-                                                    background: isSelected ? 'rgba(201,168,76,.25)' : '#f0ede8',
-                                                    color: isSelected ? '#e8c97a' : '#5a5a7a',
+                                                    background: letterBg, color: letterColor,
                                                 }}>
-                                                    {letter}
+                                                    {answerSubmitted && showCorrect ? '✓' : answerSubmitted && isWrongSelected ? '✗' : letter}
                                                 </div>
                                                 {/* Option text */}
-                                                <span style={{ flex:1, fontSize:'.9rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? '#fff' : isEliminated ? '#a0a0b0' : '#1a1a2e', lineHeight:1.5, textDecoration: isEliminated ? 'line-through' : 'none' }}>
+                                                <span style={{ flex:1, fontSize:'.9rem', fontWeight: (isSelected || showCorrect) ? 600 : 400, color: optColor, lineHeight:1.5, textDecoration: isEliminated ? 'line-through' : 'none' }}>
                                                     {option}
                                                 </span>
-                                                {/* Eliminate button */}
-                                                <button
-                                                    onClick={e => { e.stopPropagation(); toggleEliminate(currentQuestion.id, letter); }}
-                                                    title={isEliminated ? 'Restore option' : 'Eliminate option'}
-                                                    style={{ background:'none', border:'none', cursor:'pointer', padding:4, borderRadius:4, color: isEliminated ? '#c9a84c' : isSelected ? 'rgba(255,255,255,.3)' : '#c0bab0', flexShrink:0, lineHeight:0 }}
-                                                >
-                                                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
-                                                    </svg>
-                                                </button>
+                                                {/* Eliminate button — hide after submission */}
+                                                {!answerSubmitted && (
+                                                    <button
+                                                        onClick={e => { e.stopPropagation(); toggleEliminate(currentQuestion.id, letter); }}
+                                                        title={isEliminated ? 'Restore option' : 'Eliminate option'}
+                                                        style={{ background:'none', border:'none', cursor:'pointer', padding:4, borderRadius:4, color: isEliminated ? '#c9a84c' : isSelected ? 'rgba(255,255,255,.3)' : '#c0bab0', flexShrink:0, lineHeight:0 }}
+                                                    >
+                                                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                                                        </svg>
+                                                    </button>
+                                                )}
                                             </div>
                                         );
                                     })}
                                 </div>
 
-                                {/* Submit */}
-                                <button
-                                    onClick={handleConfirm}
-                                    disabled={!selectedAnswer}
-                                    style={{
-                                        width:'100%', padding:'15px', borderRadius:12, border:'none',
-                                        fontFamily:"'DM Sans',sans-serif", fontSize:'.95rem', fontWeight:700,
-                                        letterSpacing:'.02em', cursor: selectedAnswer ? 'pointer' : 'not-allowed',
-                                        background: selectedAnswer ? 'linear-gradient(135deg,#0f1e3c,#243a6b)' : '#eceae4',
-                                        color: selectedAnswer ? '#e8c97a' : '#a0a0b8',
-                                        boxShadow: selectedAnswer ? '0 4px 20px rgba(15,30,60,.25)' : 'none',
-                                        transition:'all .2s',
-                                    }}
-                                >
-                                    {currentQuestionIndex < totalQuestions - 1 ? 'Submit Answer →' : '✓ Submit Final Answer'}
-                                </button>
+                                {/* Feedback banner — shown after submission */}
+                                {answerSubmitted && (
+                                    <div style={{
+                                        padding:'12px 18px', borderRadius:10, marginBottom:16,
+                                        background: isCorrect ? '#f0fdf4' : '#fef2f2',
+                                        border: `1px solid ${isCorrect ? '#86efac' : '#fca5a5'}`,
+                                        display:'flex', alignItems:'flex-start', gap:10
+                                    }}>
+                                        <span style={{ fontSize:'1.1rem', flexShrink:0 }}>{isCorrect ? '✅' : '❌'}</span>
+                                        <div>
+                                            {isCorrect
+                                                ? <span style={{ fontWeight:600, color:'#16a34a', fontSize:'.9rem' }}>Correct!</span>
+                                                : <span style={{ fontSize:'.9rem', color:'#dc2626' }}>
+                                                    <strong>Incorrect.</strong> The correct answer is <strong>{currentQuestion.correctAnswer}</strong>: {currentQuestion.options[currentQuestion.correctAnswer.charCodeAt(0) - 65]}
+                                                  </span>
+                                            }
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Submit / Next Question button */}
+                                {!answerSubmitted ? (
+                                    <button
+                                        onClick={handleConfirm}
+                                        disabled={!selectedAnswer}
+                                        style={{
+                                            width:'100%', padding:'15px', borderRadius:12, border:'none',
+                                            fontFamily:"'DM Sans',sans-serif", fontSize:'.95rem', fontWeight:700,
+                                            letterSpacing:'.02em', cursor: selectedAnswer ? 'pointer' : 'not-allowed',
+                                            background: selectedAnswer ? 'linear-gradient(135deg,#0f1e3c,#243a6b)' : '#eceae4',
+                                            color: selectedAnswer ? '#e8c97a' : '#a0a0b8',
+                                            boxShadow: selectedAnswer ? '0 4px 20px rgba(15,30,60,.25)' : 'none',
+                                            transition:'all .2s',
+                                        }}
+                                    >
+                                        {currentQuestionIndex < totalQuestions - 1 ? 'Submit Answer →' : '✓ Submit Final Answer'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleNextQuestion}
+                                        style={{
+                                            width:'100%', padding:'15px', borderRadius:12, border:'none',
+                                            fontFamily:"'DM Sans',sans-serif", fontSize:'.95rem', fontWeight:700,
+                                            letterSpacing:'.02em', cursor:'pointer',
+                                            background:'linear-gradient(135deg,#c9a84c,#a07c30)',
+                                            color:'#0f1e3c',
+                                            boxShadow:'0 4px 20px rgba(201,168,76,.35)',
+                                            transition:'all .2s',
+                                        }}
+                                    >
+                                        {currentQuestionIndex < totalQuestions - 1 ? 'Next Question →' : '✓ View Results'}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -3541,6 +3686,21 @@ window._loadUserProgress = async function(uid) {
     if (snap.exists()) {
       window._userProgress = snap.data();
     }
+    // Fetch latest 2 activity documents from subcollection
+    try {
+      const actQuery = fns.query(
+        fns.collection(db, 'users', uid, 'activities'),
+        fns.orderBy('timestamp', 'desc'),
+        fns.limit(2)
+      );
+      const actSnap = await fns.getDocs(actQuery);
+      window._recentActivities = actSnap.docs.map(function(d) {
+        return Object.assign({ id: d.id }, d.data());
+      });
+    } catch(e2) {
+      console.warn('Activities load error (index may need creating):', e2);
+      window._recentActivities = [];
+    }
   } catch(e) { console.warn('Progress load error:', e); }
 };
 
@@ -3566,6 +3726,28 @@ window._saveSession = async function(sessionData) {
     window._userProgress = { ...prog, ...update };
     window._refreshDashStats();
   } catch(e) { console.warn('Progress save error:', e); }
+};
+
+// ── Activity: save individual session to activities subcollection ──
+window._saveActivity = async function(activityData) {
+  const user = window._currentUser;
+  if (!user) return;
+  try {
+    const db = window._fbDb; const fns = window._fbFns;
+    const activitiesRef = fns.collection(db, 'users', user.uid, 'activities');
+    await fns.addDoc(activitiesRef, Object.assign({}, activityData, {
+      timestamp: fns.serverTimestamp()
+    }));
+    // Refresh recent activities in memory and update dashboard if visible
+    try {
+      const actQuery = fns.query(activitiesRef, fns.orderBy('timestamp', 'desc'), fns.limit(2));
+      const actSnap = await fns.getDocs(actQuery);
+      window._recentActivities = actSnap.docs.map(function(d) {
+        return Object.assign({ id: d.id }, d.data());
+      });
+      window._refreshDashStats();
+    } catch(e2) { /* non-critical */ }
+  } catch(e) { console.warn('Activity save error:', e); }
 };
 
 // ── Hook into exam results ──
@@ -3697,24 +3879,66 @@ window._refreshDashStats = function() {
     var rb = document.getElementById('dashResumeBar'); if(rb) rb.style.width = Math.min(ls.score||0,100) + '%';
   }
 
-  // Recent activity list
+  // ── Last Score from Firestore activities ──
+  var recentActs = window._recentActivities || [];
+  if (recentActs.length > 0) {
+    var firstAct = recentActs[0];
+    var lastScoreVal = (firstAct.correctAnswers || 0) + ' / ' + (firstAct.totalQuestions || 0) + '  (' + (firstAct.scorePercent || 0) + '%)';
+    el = document.getElementById('dStatLastScore'); if(el) el.textContent = lastScoreVal;
+    // Show chapter + date sub-label
+    var lsDetail = document.getElementById('dashLastScoreDetail');
+    var lsChapter = document.getElementById('dashLastScoreChapter');
+    var lsDate = document.getElementById('dashLastScoreDate');
+    if (lsDetail && lsChapter && lsDate) {
+      lsDetail.style.display = '';
+      lsChapter.textContent = firstAct.chapter || '';
+      var tsDate = firstAct.timestamp && firstAct.timestamp.toDate ? firstAct.timestamp.toDate() : null;
+      lsDate.textContent = tsDate ? tsDate.toLocaleString('en-IN') : '';
+    }
+  } else {
+    el = document.getElementById('dStatLastScore'); if(el) el.textContent = '—';
+  }
+
+  // ── Recent activity list — use Firestore activities if available, else fall back to sessions ──
   var actEl = document.getElementById('dashActivity');
   if (actEl) {
-    var recent = sessions.slice(-8).reverse();
-    if (recent.length === 0) {
-      actEl.innerHTML = '<div class="activity-empty">No sessions yet — start practising!</div>';
-    } else {
-      actEl.innerHTML = recent.map(function(s) {
-        var sc = s.score || 0;
+    if (recentActs.length > 0) {
+      // Rich format from activities subcollection
+      actEl.innerHTML = '<div class="activity-list">' + recentActs.map(function(a) {
+        var sc = a.scorePercent || 0;
         var cls = sc >= 70 ? 'good' : sc >= 50 ? 'mid' : 'low';
-        var d3 = new Date(s.date);
-        var dstr = d3.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        var tsDate = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate() : null;
+        var dstr = tsDate ? tsDate.toLocaleString('en-IN') : '—';
+        var modeBadge = '<span style="display:inline-block;background:#0f1e3c;color:#c9a84c;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-right:6px;letter-spacing:.04em;">' +
+          (a.mode === 'Daily Challenge' ? 'Daily Challenge' : 'Practice') + '</span>';
         return '<div class="activity-item">' +
           '<div class="activity-icon">📝</div>' +
-          '<div class="activity-text"><strong>' + (s.chapter||'Practice') + '</strong><span>' + dstr + ' · ' + (s.answered||0) + ' questions</span></div>' +
-          '<div class="activity-score ' + cls + '">' + sc + '%</div>' +
+          '<div class="activity-text"><strong>' + modeBadge + (a.chapter || 'Practice') + '</strong>' +
+          '<span>' + dstr + '</span></div>' +
+          '<div style="text-align:right;flex-shrink:0;">' +
+            '<div class="activity-score ' + cls + '">' + (a.correctAnswers||0) + ' / ' + (a.totalQuestions||0) + '</div>' +
+            '<div style="font-size:.68rem;color:#9a9aaa;">' + sc + '%</div>' +
+          '</div>' +
           '</div>';
-      }).join('');
+      }).join('') + '</div>';
+    } else {
+      // Fallback: legacy sessions array
+      var recent = sessions.slice(-2).reverse();
+      if (recent.length === 0) {
+        actEl.innerHTML = '<div class="activity-empty">No activity yet — start your first session!</div>';
+      } else {
+        actEl.innerHTML = '<div class="activity-list">' + recent.map(function(s) {
+          var sc = s.score || 0;
+          var cls = sc >= 70 ? 'good' : sc >= 50 ? 'mid' : 'low';
+          var d3 = new Date(s.date);
+          var dstr = d3.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+          return '<div class="activity-item">' +
+            '<div class="activity-icon">📝</div>' +
+            '<div class="activity-text"><strong>' + (s.chapter||'Practice') + '</strong><span>' + dstr + ' · ' + (s.answered||0) + ' questions</span></div>' +
+            '<div class="activity-score ' + cls + '">' + sc + '%</div>' +
+            '</div>';
+        }).join('') + '</div>';
+      }
     }
   }
 
