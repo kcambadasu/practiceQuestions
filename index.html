@@ -810,7 +810,7 @@ footer{
            signInWithPopup, GoogleAuthProvider, signOut, updateProfile, sendPasswordResetEmail }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp,
-           addDoc, collection, query, orderBy, limit, getDocs }
+           addDoc, collection, query, orderBy, limit, getDocs, deleteDoc }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -836,7 +836,7 @@ footer{
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signInWithPopup, signOut, updateProfile, sendPasswordResetEmail,
     doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp,
-    addDoc, collection, query, orderBy, limit, getDocs
+    addDoc, collection, query, orderBy, limit, getDocs, deleteDoc
   };
 
   // ── Auth state listener ──
@@ -979,10 +979,12 @@ footer{
           </div>
         </div>
 
-        <!-- Subjects grid -->
-        <div class="dash-section-title">Choose a Subject</div>
-        <div class="subjects-grid" id="dashSubjectsGrid">
-          <!-- filled by JS -->
+        <!-- Subjects grid — hidden when a saved session is present (resume context) -->
+        <div id="dashSubjectsSection">
+          <div class="dash-section-title">Choose a Subject</div>
+          <div class="subjects-grid" id="dashSubjectsGrid">
+            <!-- filled by JS -->
+          </div>
         </div>
       </div>
 
@@ -2205,11 +2207,38 @@ function FinanceExamApp() {
             const [answerSubmitted, setAnswerSubmitted] = useState(false);
             const [isCorrect, setIsCorrect] = useState(null);
             const [liveScore, setLiveScore] = useState(0);
+            const [saveConfirmMsg, setSaveConfirmMsg] = useState('');
 
 
             // Load and auto-start from home page config
             useEffect(() => {
                 if (allQuestions.length > 0 || isLoadingQuestions) return;
+
+                // ── Resume saved session path ──
+                if (window.RESUME_SESSION) {
+                    const rs = window.RESUME_SESSION;
+                    window.RESUME_SESSION = null; // consume so it isn't used twice
+                    // Convert answeredMap { qId: 'A' } → answers { qId: { selected:'A', timeSpent:0 } }
+                    const restoredAnswers = {};
+                    Object.entries(rs.answeredMap || {}).forEach(([qId, sel]) => {
+                        restoredAnswers[qId] = { selected: sel, timeSpent: 0 };
+                    });
+                    setAllQuestions(rs.questions);
+                    setQuestions(rs.questions);
+                    setExamStarted(true);
+                    setCurrentQuestionIndex(rs.currentIndex || 0);
+                    setSelectedAnswer('');
+                    setAnswers(restoredAnswers);
+                    setMarkedForReview(new Set());
+                    setEliminatedOptions({});
+                    setShowResults(false);
+                    setTimeElapsed(0);
+                    setAnswerSubmitted(false);
+                    setIsCorrect(null);
+                    setLiveScore(rs.score || 0);
+                    return;
+                }
+
                 (async () => {
                     try {
                         setIsLoadingQuestions(true);
@@ -2331,9 +2360,22 @@ function FinanceExamApp() {
                 }
             }, [examStarted, showResults]);
 
-            // Save activity to Firestore when results are shown
+            // Save activity & clear savedSession when results are shown
             useEffect(() => {
                 if (!showResults || questions.length === 0) return;
+                // Delete the saved session doc — session is now complete
+                (async () => {
+                    const user = window._currentUser;
+                    if (user && window._fbDb && window._fbFns && window._fbFns.deleteDoc) {
+                        try {
+                            await window._fbFns.deleteDoc(
+                                window._fbFns.doc(window._fbDb, 'users', user.uid, 'savedSession', 'current')
+                            );
+                            window._savedSession = null;
+                            window._refreshDashStats && window._refreshDashStats();
+                        } catch(e) { /* non-critical */ }
+                    }
+                })();
                 const scoreData = (() => {
                     let correct = 0;
                     questions.forEach(q => {
@@ -2411,6 +2453,51 @@ function FinanceExamApp() {
                     setSelectedAnswer('');
                 } else {
                     setShowResults(true);
+                }
+            };
+
+            const handleSaveAndExit = async () => {
+                const user = window._currentUser;
+                if (!user) { window.goToHome && window.goToHome(); return; }
+                try {
+                    const db = window._fbDb;
+                    const fns = window._fbFns;
+                    // Build answeredMap: { questionId: selectedOptionLetter }
+                    const answeredMap = {};
+                    Object.entries(answers).forEach(([qId, ans]) => {
+                        answeredMap[qId] = ans.selected;
+                    });
+                    // Derive chapter info
+                    const chapterSet = new Set(questions.map(q => q.chapterName).filter(Boolean));
+                    const chapterLabel = chapterSet.size === 1 ? [...chapterSet][0] : 'Mixed Chapters';
+                    const chapterCode = questions.length > 0 ? String(questions[0].chapter) : 'all';
+                    const mode = (window.EXAM_CONFIG && window.EXAM_CONFIG.dailyChallenge) ? 'Daily Challenge' : 'Practice by Chapter';
+                    await fns.setDoc(fns.doc(db, 'users', user.uid, 'savedSession', 'current'), {
+                        savedAt: fns.serverTimestamp(),
+                        mode,
+                        chapter: chapterLabel,
+                        chapterCode,
+                        questionIds: questions.map(q => q.id),
+                        currentIndex: currentQuestionIndex,
+                        score: liveScore,
+                        answeredMap
+                    });
+                    // Update in-memory saved session so resume card refreshes
+                    window._savedSession = {
+                        mode, chapter: chapterLabel, chapterCode,
+                        questionIds: questions.map(q => q.id),
+                        currentIndex: currentQuestionIndex,
+                        score: liveScore,
+                        answeredMap
+                    };
+                    setSaveConfirmMsg('Session saved! ✓');
+                    setTimeout(() => {
+                        setSaveConfirmMsg('');
+                        window.goToHome && window.goToHome();
+                    }, 1500);
+                } catch(e) {
+                    console.error('Save & Exit error:', e);
+                    window.goToHome && window.goToHome();
                 }
             };
 
@@ -2987,19 +3074,6 @@ if (examStarted && questions.length === 0) {
                                                     <div style={{ marginTop:8, fontSize:'.79rem', color:'#3a3a5c', background:'#faf8f3', borderRadius:8, padding:'10px 14px', lineHeight:1.6 }}>
                                                         <span style={{ fontWeight:600, color:'#0f1e3c' }}>Explanation: </span>{q.explanation}
                                                     </div>
-                                                    {window.CHAPTER_NAME_TO_ID && window.CHAPTER_NAME_TO_ID[q.chapterName] && (
-                                                        <div style={{ marginTop:10, textAlign:'right' }}>
-                                                            <button
-                                                                onClick={() => window.openSummaryFromResults && window.openSummaryFromResults(q.chapterName)}
-                                                                style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'1px solid rgba(201,168,76,.5)', borderRadius:20, padding:'5px 14px', fontSize:'.72rem', fontWeight:700, color:'#b98a1c', cursor:'pointer', fontFamily:"'DM Sans',sans-serif", letterSpacing:'.04em', transition:'all .15s' }}
-                                                                onMouseOver={e => { e.currentTarget.style.background='rgba(201,168,76,.1)'; e.currentTarget.style.borderColor='#c9a84c'; }}
-                                                                onMouseOut={e => { e.currentTarget.style.background='none'; e.currentTarget.style.borderColor='rgba(201,168,76,.5)'; }}
-                                                                title="Open chapter summary"
-                                                            >
-                                                                📖 View in Chapter Summary
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -3047,19 +3121,6 @@ if (examStarted && questions.length === 0) {
                                                     <div style={{ background:'#faf8f3', border:'1px solid #eceae4', borderLeft:'3px solid #c9a84c', borderRadius:'0 8px 8px 0', padding:'10px 14px', fontSize:'.79rem', color:'#3a3a5c', lineHeight:1.65 }}>
                                                         <span style={{ fontWeight:700, color:'#0f1e3c' }}>Explanation: </span>{q.explanation}
                                                     </div>
-                                                    {window.CHAPTER_NAME_TO_ID && window.CHAPTER_NAME_TO_ID[q.chapterName] && (
-                                                        <div style={{ marginTop:12, display:'flex', justifyContent:'flex-end' }}>
-                                                            <button
-                                                                onClick={() => window.openSummaryFromResults && window.openSummaryFromResults(q.chapterName)}
-                                                                style={{ display:'inline-flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.14))', border:'1px solid rgba(201,168,76,.45)', borderRadius:20, padding:'6px 16px', fontSize:'.72rem', fontWeight:700, color:'#9a6e10', cursor:'pointer', fontFamily:"'DM Sans',sans-serif", letterSpacing:'.04em', transition:'all .15s' }}
-                                                                onMouseOver={e => { e.currentTarget.style.background='rgba(201,168,76,.22)'; e.currentTarget.style.borderColor='#c9a84c'; e.currentTarget.style.color='#7a5200'; }}
-                                                                onMouseOut={e => { e.currentTarget.style.background='linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.14))'; e.currentTarget.style.borderColor='rgba(201,168,76,.45)'; e.currentTarget.style.color='#9a6e10'; }}
-                                                                title={"Review " + q.chapterName + " in Chapter Summaries"}
-                                                            >
-                                                                📖 Review in Chapter Summary →
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -3153,6 +3214,22 @@ if (examStarted && questions.length === 0) {
                                 >
                                     Submit & Exit
                                 </button>
+                                {/* Save & Exit button */}
+                                {saveConfirmMsg ? (
+                                    <span style={{ padding:'7px 14px', borderRadius:8, background:'rgba(22,163,74,.2)', border:'1px solid rgba(22,163,74,.4)', color:'#4ade80', fontFamily:"'DM Sans',sans-serif", fontSize:'.75rem', fontWeight:700 }}>
+                                        {saveConfirmMsg}
+                                    </span>
+                                ) : (
+                                    <button
+                                        onClick={handleSaveAndExit}
+                                        style={{ padding:'7px 14px', borderRadius:8, border:'1px solid rgba(201,168,76,.5)', background:'rgba(15,30,60,.6)', color:'#c9a84c', fontFamily:"'DM Sans',sans-serif", fontSize:'.75rem', fontWeight:600, cursor:'pointer', letterSpacing:'.03em', transition:'all .18s' }}
+                                        onMouseOver={e => e.currentTarget.style.background='rgba(201,168,76,.15)'}
+                                        onMouseOut={e => e.currentTarget.style.background='rgba(15,30,60,.6)'}
+                                        title="Save progress and return to dashboard"
+                                    >
+                                        💾 Save & Exit
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -3701,6 +3778,14 @@ window._loadUserProgress = async function(uid) {
       console.warn('Activities load error (index may need creating):', e2);
       window._recentActivities = [];
     }
+    // Fetch saved session (for "Continue Last Session" resume card)
+    try {
+      const savedSnap = await fns.getDoc(fns.doc(db, 'users', uid, 'savedSession', 'current'));
+      window._savedSession = savedSnap.exists() ? savedSnap.data() : null;
+    } catch(e3) {
+      console.warn('Saved session load error:', e3);
+      window._savedSession = null;
+    }
   } catch(e) { console.warn('Progress load error:', e); }
 };
 
@@ -3791,19 +3876,71 @@ window.dashGoToPractice = function() {
   window._showHome();
 };
 
-window.dashResume = function() {
-  const ls = window._userProgress.lastSession;
-  if (!ls) { window.dashGoToPractice(); return; }
-  // Find chapter ID from chapter label
-  var chId = 'all';
-  if (window.CHAPTER_NAME_TO_ID && ls.chapter) {
-    chId = window.CHAPTER_NAME_TO_ID[ls.chapter] || 'all';
+window.dashResume = async function() {
+  // Show loading state on button
+  var btnEl = document.querySelector('#dashResumeCard .btn-resume');
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Loading…'; }
+
+  try {
+    const db = window._fbDb; const fns = window._fbFns;
+    const user = window._currentUser;
+    if (!user) { window.dashGoToPractice(); return; }
+
+    // Use already-loaded data if available, otherwise fetch
+    var savedData = window._savedSession;
+    if (!savedData) {
+      var savedSnap = await fns.getDoc(fns.doc(db, 'users', user.uid, 'savedSession', 'current'));
+      if (!savedSnap.exists()) {
+        alert('No saved session found. Start a new session instead.');
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Resume Practice →'; }
+        return;
+      }
+      savedData = savedSnap.data();
+      window._savedSession = savedData;
+    }
+
+    // Re-hydrate question objects from the global question bank
+    var allQ = window.QUESTIONS_DATA || window.questions || window.QUESTIONS || [];
+    if (allQ.length === 0) {
+      alert('Question bank is still loading. Please wait a moment and try again.');
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Resume Practice →'; }
+      return;
+    }
+    var restoredQs = (savedData.questionIds || [])
+      .map(function(id) { return allQ.find(function(q) { return q.id === id; }); })
+      .filter(Boolean);
+
+    if (restoredQs.length === 0) {
+      alert('Saved session questions could not be found. They may have been updated. Please start a new session.');
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Resume Practice →'; }
+      return;
+    }
+
+    // Set up resume payload for FinanceExamApp to consume
+    window.RESUME_SESSION = {
+      questions:    restoredQs,
+      currentIndex: savedData.currentIndex || 0,
+      score:        savedData.score || 0,
+      answeredMap:  savedData.answeredMap || {},
+      mode:         savedData.mode,
+      chapter:      savedData.chapter
+    };
+    window.EXAM_CONFIG = { chapter: savedData.chapterCode || 'all', resume: true };
+
+    // Navigate directly to exam panel (skip homePanel)
+    document.getElementById('dashPanel').classList.remove('active');
+    document.getElementById('examPanel').classList.add('active');
+
+    // Mount/remount React app
+    document.getElementById('app').innerHTML = '';
+    reactMounted = false;
+    setTimeout(function() { window.mountReact(); reactMounted = true; }, 50);
+
+  } catch(e) {
+    console.error('Resume session error:', e);
+    alert('Failed to load saved session. Please try again.');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Resume Practice →'; }
   }
-  window.EXAM_CONFIG = { chapter: chId, shuffle: true };
-  document.getElementById('dashPanel').classList.remove('active');
-  document.getElementById('homePanel').classList.remove('hidden');
-  document.getElementById('homePanel').classList.add('hidden');
-  document.getElementById('examPanel').classList.add('active');
 };
 
 window._buildDashSubjects = function() {
@@ -3864,19 +4001,38 @@ window._refreshDashStats = function() {
     el.textContent = d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
   }
 
-  // Resume card
-  var ls = p.lastSession;
+  // Resume card — show only when there is a true saved (in-progress) session
+  var savedSess = window._savedSession;
   var rc = document.getElementById('dashResumeCard');
-  if (rc && ls) {
-    rc.style.display = '';
-    var rch = document.getElementById('dashResumeChapter'); if(rch) rch.textContent = ls.chapter || 'Last chapter';
-    var rmt = document.getElementById('dashResumeMeta');
-    if (rmt) {
-      var d2 = new Date(ls.date);
-      rmt.textContent = 'Last session: ' + d2.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' · Score: ' + (ls.score||0) + '%';
+  if (rc) {
+    if (savedSess) {
+      rc.style.display = '';
+      var rch = document.getElementById('dashResumeChapter');
+      if (rch) rch.textContent = savedSess.chapter || 'Last chapter';
+      var rmt = document.getElementById('dashResumeMeta');
+      if (rmt) {
+        var savedAt = savedSess.savedAt && savedSess.savedAt.toDate ? savedSess.savedAt.toDate() : null;
+        var dstr = savedAt ? savedAt.toLocaleString('en-IN') : '';
+        var totalQs = (savedSess.questionIds || []).length;
+        var doneQs  = Object.keys(savedSess.answeredMap || {}).length;
+        rmt.textContent = (dstr ? 'Saved ' + dstr + ' · ' : '') +
+          'Score: ' + (savedSess.score || 0) + ' · ' +
+          doneQs + ' / ' + totalQs + ' answered';
+      }
+      var rsub = document.getElementById('dashResumeSubtitle');
+      if (rsub) rsub.textContent = (savedSess.mode || 'Practice') + ' — ' + (savedSess.chapter || '');
+      var rb = document.getElementById('dashResumeBar');
+      if (rb) {
+        var totalLen = (savedSess.questionIds || []).length;
+        var pct = totalLen > 0 ? Math.round((savedSess.currentIndex || 0) / totalLen * 100) : 0;
+        rb.style.width = pct + '%';
+      }
+    } else {
+      rc.style.display = 'none';
     }
-    var rsub = document.getElementById('dashResumeSubtitle'); if(rsub) rsub.textContent = 'Last studied: ' + (ls.chapter||'');
-    var rb = document.getElementById('dashResumeBar'); if(rb) rb.style.width = Math.min(ls.score||0,100) + '%';
+    // Show/hide subjects section depending on whether resume card is shown
+    var subjectsSection = document.getElementById('dashSubjectsSection');
+    if (subjectsSection) subjectsSection.style.display = savedSess ? 'none' : '';
   }
 
   // ── Last Score from Firestore activities ──
