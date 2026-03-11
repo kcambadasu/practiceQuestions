@@ -1558,10 +1558,23 @@ const MASTERY_TOPIC_IDS = [...new Set(FORMULA_FAMILIES.map(f => f.topicId))];
 // ── Mastery state ─────────────────────────────────────────────────────────────
 let selectedSubFamily = null; // a q.topic string e.g. 'Modified Duration', or null
 
-// Count formula_drill questions for the current mastery selection
+// Count formula_drill OR mode='mastery' questions for the current mastery selection
+// BUG FIX: original code only counted questionType==='formula_drill'; new mastery questions
+// use mode==='mastery' instead, so both must be included.
 function getMasteryCount(sel) {
   var allQ = window.QUESTIONS_DATA || window.questions || [];
   if (!allQ.length) return null;
+
+  // New mastery-practice pseudo-topic: count only mode=mastery questions
+  if (sel.family === 'mastery-practice') {
+    return allQ.filter(function(x){ return x.mode === 'mastery'; }).length;
+  }
+  // New MAST_ chapter selected: count by chapterCode
+  if (sel.family && sel.family.startsWith('MAST_')) {
+    return allQ.filter(function(x){ return x.mode === 'mastery' && x.chapterCode === sel.family; }).length;
+  }
+
+  // Legacy formula_drill path (unchanged)
   var q = allQ.filter(function(x){ return x.questionType === 'formula_drill'; });
   if (sel.subFamily) {
     q = q.filter(function(x){ return x.topic === sel.subFamily; });
@@ -1571,6 +1584,11 @@ function getMasteryCount(sel) {
     var tId = sel.family.replace('-all','');
     var famIds = new Set(FORMULA_FAMILIES.filter(function(f){ return f.topicId === tId; }).map(function(f){ return f.id; }));
     q = q.filter(function(x){ return famIds.has(x.chapter); });
+  }
+  // When 'all': also add mode=mastery count
+  if (!sel.family || sel.family === 'all') {
+    var masteryCount = allQ.filter(function(x){ return x.mode === 'mastery'; }).length;
+    return q.length + masteryCount;
   }
   return q.length;
 }
@@ -1592,13 +1610,26 @@ function buildTopicDropdown() {
   document.getElementById('chapterLabel').textContent = masteryOn ? 'Formula Family' : 'Chapter / Reading';
 
   if (masteryOn) {
-    const masteryTopics = TOPICS.filter(t => MASTERY_TOPIC_IDS.includes(t.id));
+    // BUG FIX: added 'Mastery Practice' pseudo-topic so mode=mastery questions are selectable.
+    // 'All Mastery Topics' now covers both formula_drill and mode=mastery questions.
     const allOpt = document.createElement('option');
-    allOpt.value = 'all'; allOpt.textContent = '🧮  All Formula Topics';
+    allOpt.value = 'all'; allOpt.textContent = '🧮  All Mastery Topics';
     sel.appendChild(allOpt);
     const sep = document.createElement('option');
     sep.disabled = true; sep.textContent = '──────────────────────────';
     sel.appendChild(sep);
+
+    // New mastery-practice pseudo-topic (mode=mastery questions)
+    const mpOpt = document.createElement('option');
+    mpOpt.value = 'mastery-practice'; mpOpt.textContent = '🎯  Mastery Practice';
+    sel.appendChild(mpOpt);
+
+    // Separator before legacy formula drill topics
+    const sep2 = document.createElement('option');
+    sep2.disabled = true; sep2.textContent = '── 🔬 Formula Drill ──────────';
+    sel.appendChild(sep2);
+
+    const masteryTopics = TOPICS.filter(t => MASTERY_TOPIC_IDS.includes(t.id));
     masteryTopics.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id;
@@ -1636,11 +1667,36 @@ function buildChapterDropdownForTopic(topicId) {
   if (masteryOn) {
     if (topicId === 'all') {
       const opt = document.createElement('option');
-      opt.value = 'all'; opt.textContent = '🧮  All Formula Families';
+      opt.value = 'all'; opt.textContent = '🧮  All Mastery Topics';
       sel.appendChild(opt);
       sel.disabled = false;
       return;
     }
+
+    // BUG FIX: 'mastery-practice' pseudo-topic — populate from actual mode=mastery data
+    if (topicId === 'mastery-practice') {
+      const allQ = window.QUESTIONS_DATA || [];
+      const mastQs = allQ.filter(q => q.mode === 'mastery');
+      // Deduplicate chapterCode → chapter name
+      const chapMap = new Map();
+      mastQs.forEach(q => { if (!chapMap.has(q.chapterCode)) chapMap.set(q.chapterCode, q.chapter); });
+      const allOpt = document.createElement('option');
+      allOpt.value = 'mastery-practice'; allOpt.textContent = '🎯  All Mastery Practice (' + mastQs.length + ' Q)';
+      sel.appendChild(allOpt);
+      const sep = document.createElement('option');
+      sep.disabled = true; sep.textContent = '──────────────────────────';
+      sel.appendChild(sep);
+      [...chapMap.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([code, name]) => {
+        const count = mastQs.filter(q => q.chapterCode === code).length;
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = '🎯  ' + name.replace('Mastery – ', '') + '  (' + count + ')';
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      return;
+    }
+
     const families = FORMULA_FAMILIES.filter(f => f.topicId === topicId);
     if (!families.length) { sel.disabled = true; return; }
     const topic = TOPICS.find(t => t.id === topicId);
@@ -1761,7 +1817,10 @@ function selectChapter(id) {
   selectedChapter = id || null;
   selectedSubFamily = null;
   // In mastery mode, check if the selected family has sub-families
-  if (masteryOn && id && !id.endsWith('-all') && id !== 'all') {
+  // BUG FIX: MAST_ chapterCodes and mastery-practice are not in FORMULA_FAMILIES,
+  // so don't attempt to build a sub-family dropdown for them.
+  if (masteryOn && id && !id.endsWith('-all') && id !== 'all'
+      && !id.startsWith('MAST_') && id !== 'mastery-practice') {
     buildSubFamilyDropdown(id);
   } else {
     hideSubFamilyDropdown();
@@ -1810,7 +1869,15 @@ function updatePreview() {
     if (selectedSubFamily) {
       chLabel = selectedSubFamily;
     } else if (!selectedChapter || selectedChapter === 'all') {
-      chLabel = 'All Formula Topics';
+      chLabel = 'All Mastery Topics';
+    } else if (selectedChapter === 'mastery-practice') {
+      // BUG FIX: new mastery-practice pseudo-topic
+      chLabel = 'All Mastery Practice';
+    } else if (selectedChapter.startsWith('MAST_')) {
+      // BUG FIX: new MAST_ chapter selected — look up human-readable name from data
+      var allQ = window.QUESTIONS_DATA || [];
+      var mq = allQ.find(function(x){ return x.chapterCode === selectedChapter; });
+      chLabel = mq ? mq.chapter.replace('Mastery – ', '') : selectedChapter;
     } else if (selectedChapter.endsWith('-all')) {
       var t = TOPICS.find(function(x){ return x.id === selectedChapter.replace('-all',''); });
       chLabel = t ? 'All ' + t.label + ' Families' : selectedChapter;
@@ -1820,8 +1887,9 @@ function updatePreview() {
     }
     var mSel = { family: selectedChapter, subFamily: selectedSubFamily };
     var mCount = getMasteryCount(mSel);
-    document.getElementById('previewChapter').textContent = '🧮 ' + chLabel;
-    document.getElementById('previewCount').textContent = mCount !== null ? mCount + " formula Q's" : '—';
+    var icon = (selectedChapter && (selectedChapter === 'mastery-practice' || selectedChapter.startsWith('MAST_'))) ? '🎯' : '🧮';
+    document.getElementById('previewChapter').textContent = icon + ' ' + chLabel;
+    document.getElementById('previewCount').textContent = mCount !== null ? mCount + " Q's" : '—';
     document.getElementById('previewTime').textContent = (mCount !== null && mCount > 0) ? '~' + Math.round(mCount * 1.5) + ' min' : '—';
     return;
   }
@@ -2294,20 +2362,35 @@ function FinanceExamApp() {
                         const config = window.EXAM_CONFIG || { chapter: 'all', shuffle: false };
                         let filtered = data;
 
-                        // ── Mastery mode: filter formula_drill directly from full data ──
-                        // (skips the chapter pre-filter which would block families like FI-47/FSA-19
-                        //  that don't share chapter codes with regular questions)
+                        // ── Mastery mode: filter questions for mastery practice ──
+                        // BUG FIX: original code only filtered by questionType==='formula_drill'.
+                        // New mastery questions use mode==='mastery' with chapterCode like 'MAST_FVPV'.
+                        // Fix: route 'mastery-practice' topic and 'MAST_' chapters to mode=mastery filter;
+                        //      keep legacy formula_drill path for formula-family selections;
+                        //      when chapter='all', combine both pools.
                         if (config.masteryMode) {
-                          let fdFiltered = data.filter(q => q.questionType === 'formula_drill');
-                          if (config.subFamily) {
-                            // Sub-family: fuzzy match so minor label differences don't break it
-                            const sf = config.subFamily.toLowerCase();
-                            fdFiltered = fdFiltered.filter(q => {
-                              const t = (q.topic || '').toLowerCase();
-                              return t === sf || t.startsWith(sf) || t.includes(sf);
-                            });
-                          } else if (config.chapter && config.chapter !== 'all') {
-                            if (config.chapter.endsWith('-all')) {
+                          let fdFiltered;
+
+                          if (config.chapter && config.chapter.startsWith('MAST_')) {
+                            // New mastery: single chapterCode selected
+                            fdFiltered = data.filter(q => q.mode === 'mastery' && q.chapterCode === config.chapter);
+                          } else if (config.chapter === 'mastery-practice') {
+                            // New mastery: all mastery-practice questions
+                            fdFiltered = data.filter(q => q.mode === 'mastery');
+                          } else if (!config.chapter || config.chapter === 'all') {
+                            // All mastery: combine formula_drill + mode=mastery
+                            fdFiltered = data.filter(q => q.questionType === 'formula_drill' || q.mode === 'mastery');
+                          } else {
+                            // Legacy formula_drill path (formula families)
+                            fdFiltered = data.filter(q => q.questionType === 'formula_drill');
+                            if (config.subFamily) {
+                              // Sub-family: fuzzy match so minor label differences don't break it
+                              const sf = config.subFamily.toLowerCase();
+                              fdFiltered = fdFiltered.filter(q => {
+                                const t = (q.topic || '').toLowerCase();
+                                return t === sf || t.startsWith(sf) || t.includes(sf);
+                              });
+                            } else if (config.chapter.endsWith('-all')) {
                               const topicId = config.chapter.replace('-all', '');
                               const famIds = new Set((window.FORMULA_FAMILIES || []).filter(f => f.topicId === topicId).map(f => f.id));
                               fdFiltered = fdFiltered.filter(q => famIds.has(q.chapter));
@@ -2315,8 +2398,9 @@ function FinanceExamApp() {
                               fdFiltered = fdFiltered.filter(q => q.chapter === config.chapter);
                             }
                           }
+
                           if (fdFiltered.length === 0) {
-                            setLoadError('No formula-drill questions found for this selection.');
+                            setLoadError('No mastery questions found for this selection.');
                             setIsLoadingQuestions(false);
                             return;
                           }
