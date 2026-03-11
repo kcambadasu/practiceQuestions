@@ -370,112 +370,14 @@ select:disabled{opacity:.55;cursor:not-allowed}
 .tips-list li{display:flex;gap:10px;font-size:.78rem;color:var(--text-mid);line-height:1.45}
 .tips-list li::before{content:'💡';flex-shrink:0;font-size:.8rem;margin-top:1px}
 
-/* ── FOOTER (compact) ── */
+/* ── FOOTER ── */
 footer{
   background:var(--navy);
-  padding:16px 24px;
+  padding:28px 40px;
   text-align:center;
-  border-top:1px solid rgba(201,168,76,.25);
 }
-
-/* ── COMPACT FOOTER (all internal panels) ── */
-.compact-footer{
-  padding:16px 24px;
-  text-align:center;
-  border-top:1px solid rgba(201,168,76,.25);
-  background:var(--navy);
-}
-.cf-summary{
-  color:rgba(255,255,255,.55);
-  font-size:.75rem;
-  line-height:1.55;
-  margin-bottom:8px;
-}
-.cf-links{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-wrap:wrap;
-  gap:2px 4px;
-  font-size:.75rem;
-}
-.cf-link{
-  color:#c9a84c;
-  text-decoration:none;
-  cursor:pointer;
-  transition:text-decoration .15s;
-}
-.cf-link:hover{text-decoration:underline}
-.cf-pipe{color:rgba(255,255,255,.3);margin:0 6px;user-select:none}
-.cf-contact-wrap{position:relative;display:inline-block}
-.cf-popover{
-  position:absolute;
-  bottom:calc(100% + 8px);
-  left:50%;
-  transform:translateX(-50%);
-  background:#fff;
-  border:1px solid #1e2a4a;
-  border-radius:6px;
-  padding:10px 14px;
-  font-size:12px;
-  color:#1e2a4a;
-  box-shadow:0 2px 8px rgba(0,0,0,.15);
-  white-space:nowrap;
-  z-index:200;
-  text-align:left;
-}
-.cf-popover p{margin:2px 0;line-height:1.5}
-.cf-popover a{color:#c9a84c;text-decoration:none}
-.cf-popover a:hover{text-decoration:underline}
-
-/* ── DISCLAIMER MODAL ── */
-#disclaimerModal{
-  position:fixed;inset:0;z-index:9999;
-  background:rgba(10,18,40,.85);
-  backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;
-  padding:20px;
-}
-.disc-box{
-  background:#0f1e3c;
-  border:1px solid rgba(201,168,76,.25);
-  border-radius:16px;
-  max-width:620px;width:100%;
-  padding:36px 40px;
-  box-shadow:0 24px 80px rgba(0,0,0,.6);
-  max-height:90vh;
-  overflow-y:auto;
-}
-.disc-box h2{
-  font-family:'Cormorant Garamond',serif;
-  color:var(--gold-light);
-  font-size:1.5rem;
-  margin-bottom:6px;
-}
-.disc-eyebrow{
-  font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;
-  color:rgba(201,168,76,.5);margin-bottom:20px;
-}
-.disc-section{margin-bottom:14px}
-.disc-section h4{
-  color:rgba(201,168,76,.75);
-  font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
-  margin-bottom:4px;
-}
-.disc-section p{color:rgba(255,255,255,.55);font-size:.77rem;line-height:1.65}
-.disc-divider{border:none;border-top:1px solid rgba(201,168,76,.1);margin:16px 0}
-.disc-accept-row{display:flex;align-items:center;gap:12px;margin-top:24px;flex-wrap:wrap}
-.disc-accept-row label{color:rgba(255,255,255,.55);font-size:.78rem;cursor:pointer;flex:1;min-width:200px}
-.disc-accept-row label input{margin-right:6px;accent-color:var(--gold);cursor:pointer}
-.disc-btn{
-  background:linear-gradient(135deg,var(--gold) 0%,var(--gold-dim) 100%);
-  color:var(--navy);
-  font-weight:600;font-size:.82rem;
-  padding:11px 28px;border-radius:8px;border:none;cursor:pointer;
-  opacity:.4;pointer-events:none;transition:opacity .2s;white-space:nowrap;
-}
-.disc-btn.enabled{opacity:1;pointer-events:auto}
-.disc-btn.enabled:hover{filter:brightness(1.08)}
+.footer-logo{font-family:'Cormorant Garamond',serif;color:rgba(255,255,255,.3);font-size:.85rem;letter-spacing:.1em}
+.footer-note{color:rgba(255,255,255,.2);font-size:.7rem;margin-top:6px}
 
 /* ── ANIMATIONS ── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -1132,22 +1034,6 @@ footer{
     </div>
   </div>
 
-  <div class="compact-footer">
-    <p class="cf-summary">K2 Intellect is an educational platform for CFA&#174; exam preparation. Content is for learning purposes only and does not constitute investment advice.</p>
-    <div class="cf-links">
-      <a class="cf-link" onclick="window.open(K2_FULL_DISCLOSURE_URL,'_blank');return false;" href="#">Full Disclosure</a>
-      <span class="cf-pipe">|</span>
-      <a class="cf-link" onclick="window.open(K2_TERMS_URL,'_blank');return false;" href="#">Terms of Use</a>
-      <span class="cf-pipe">|</span>
-      <a class="cf-link" onclick="window.open(K2_PRIVACY_URL,'_blank');return false;" href="#">Privacy Policy</a>
-      <span class="cf-pipe">|</span>
-      <span class="cf-contact-wrap">
-        <a class="cf-link" onclick="k2ToggleContact(this);return false;" href="#">Contact</a>
-        <div class="cf-popover" style="display:none">
-          <p><strong>K2 Intellect LLP</strong></p>
-          <p>Nandanam, Chennai &#8211; 600008</p>
-          <p>Ph: <a href="tel:7358757104">7358757104</a></p>
-        </div>
       </span>
     </div>
   </div>
@@ -1357,94 +1243,11 @@ footer{
 </main>
 
 <footer>
-  <p class="cf-summary">K2 Intellect is an educational platform for CFA&#174; exam preparation.
-  Content is for learning purposes only and does not constitute investment advice.</p>
-  <div class="cf-links">
-    <a class="cf-link" onclick="window.open(K2_FULL_DISCLOSURE_URL,'_blank')" href="#">Full Disclosure</a>
-    <span class="cf-pipe">|</span>
-    <a class="cf-link" onclick="window.open(K2_TERMS_URL,'_blank')" href="#">Terms of Use</a>
-    <span class="cf-pipe">|</span>
-    <a class="cf-link" onclick="window.open(K2_PRIVACY_URL,'_blank')" href="#">Privacy Policy</a>
-    <span class="cf-pipe">|</span>
-    <span class="cf-contact-wrap">
-      <a class="cf-link" onclick="k2ToggleContact(this);return false;" href="#">Contact</a>
-      <div class="cf-popover" style="display:none">
-        <p><strong>K2 Intellect LLP</strong></p>
-        <p>Nandanam, Chennai &#8211; 600008</p>
-        <p>Ph: <a href="tel:7358757104">7358757104</a></p>
-      </div>
-    </span>
-  </div>
+  <div class="footer-logo">CFA Level I · Practice Hub</div>
+  <div class="footer-note">For study purposes only · Not affiliated with CFA Institute</div>
 </footer>
 
 </div><!-- /#homePanel -->
-
-<!-- ════════════════════════════════
-     DISCLAIMER MODAL (first visit)
-════════════════════════════════ -->
-<div id="disclaimerModal" style="display:none">
-  <div class="disc-box">
-    <div class="disc-eyebrow">Important Notice · Please Read Before Continuing</div>
-    <h2>Terms &amp; Disclaimer</h2>
-
-    <div class="disc-section">
-      <h4>Educational Purpose Only</h4>
-      <p>This platform is an independent study tool designed exclusively for personal, non-commercial use. All content — including questions, scenarios, and explanations — is intended to support self-study for the CFA examination and does not constitute investment, financial, legal, or professional advice.</p>
-    </div>
-
-    <hr class="disc-divider">
-
-    <div class="disc-section">
-      <h4>No Affiliation with CFA Institute</h4>
-      <p>K2 Intellect Practice Hub is an independent educational resource. It is not affiliated with, sponsored by, or endorsed by CFA Institute. <strong style="color:rgba(201,168,76,.6)">CFA®</strong> and <strong style="color:rgba(201,168,76,.6)">Chartered Financial Analyst®</strong> are registered trademarks of CFA Institute. Their use here is purely for descriptive reference.</p>
-    </div>
-
-    <hr class="disc-divider">
-
-    <div class="disc-section">
-      <h4>Intellectual Property &amp; Copyright</h4>
-      <p>All practice questions, explanations, and materials on this platform are original works created by K2 Intellect and are protected by copyright. They are not reproduced from the CFA Institute curriculum or any third-party source. Reproduction, redistribution, or commercial use of any content without prior written permission is strictly prohibited.</p>
-    </div>
-
-    <hr class="disc-divider">
-
-    <div class="disc-section">
-      <h4>No Guarantee of Exam Success</h4>
-      <p>Practice performance on this platform is not predictive of actual CFA exam results. The CFA examination is solely administered and graded by CFA Institute. K2 Intellect makes no representations regarding exam pass rates or outcomes.</p>
-    </div>
-
-    <hr class="disc-divider">
-
-    <div class="disc-section">
-      <h4>Plagiarism &amp; Misuse</h4>
-      <p>Users must not reproduce, share, publish, or sell any questions or content from this platform. Violation of these terms may result in legal action under applicable copyright and intellectual property laws.</p>
-    </div>
-
-    <div class="disc-accept-row">
-      <label>
-        <input type="checkbox" id="discCheck" onchange="
-          var btn = document.getElementById('discAcceptBtn');
-          if(this.checked){ btn.classList.add('enabled'); }
-          else { btn.classList.remove('enabled'); }
-        ">
-        I have read and agree to the above disclaimer and terms of use.
-      </label>
-      <button class="disc-btn" id="discAcceptBtn" onclick="
-        sessionStorage.setItem('k2_disc_accepted','1');
-        document.getElementById('disclaimerModal').style.display='none';
-      ">Continue to Platform</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// Show disclaimer modal on first visit (once per session)
-(function(){
-  if(!sessionStorage.getItem('k2_disc_accepted')){
-    document.getElementById('disclaimerModal').style.display='flex';
-  }
-})();
-</script>
 
 
 
@@ -1456,22 +1259,6 @@ footer{
 
 
 
-  <div class="compact-footer">
-    <p class="cf-summary">K2 Intellect is an educational platform for CFA&#174; exam preparation. Content is for learning purposes only and does not constitute investment advice.</p>
-    <div class="cf-links">
-      <a class="cf-link" onclick="window.open(K2_FULL_DISCLOSURE_URL,'_blank');return false;" href="#">Full Disclosure</a>
-      <span class="cf-pipe">|</span>
-      <a class="cf-link" onclick="window.open(K2_TERMS_URL,'_blank');return false;" href="#">Terms of Use</a>
-      <span class="cf-pipe">|</span>
-      <a class="cf-link" onclick="window.open(K2_PRIVACY_URL,'_blank');return false;" href="#">Privacy Policy</a>
-      <span class="cf-pipe">|</span>
-      <span class="cf-contact-wrap">
-        <a class="cf-link" onclick="k2ToggleContact(this);return false;" href="#">Contact</a>
-        <div class="cf-popover" style="display:none">
-          <p><strong>K2 Intellect LLP</strong></p>
-          <p>Nandanam, Chennai &#8211; 600008</p>
-          <p>Ph: <a href="tel:7358757104">7358757104</a></p>
-        </div>
       </span>
     </div>
   </div>
@@ -3760,22 +3547,6 @@ window.mountReact = function mountReact() {
     <p class="bhint">Powered by Claude &middot; K2 Intellect LLP</p>
   </div>
 
-<div class="compact-footer">
-  <p class="cf-summary">K2 Intellect is an educational platform for CFA&#174; exam preparation. Content is for learning purposes only and does not constitute investment advice.</p>
-  <div class="cf-links">
-    <a class="cf-link" onclick="window.open(K2_FULL_DISCLOSURE_URL,'_blank');return false;" href="#">Full Disclosure</a>
-    <span class="cf-pipe">|</span>
-    <a class="cf-link" onclick="window.open(K2_TERMS_URL,'_blank');return false;" href="#">Terms of Use</a>
-    <span class="cf-pipe">|</span>
-    <a class="cf-link" onclick="window.open(K2_PRIVACY_URL,'_blank');return false;" href="#">Privacy Policy</a>
-    <span class="cf-pipe">|</span>
-    <span class="cf-contact-wrap">
-      <a class="cf-link" onclick="k2ToggleContact(this);return false;" href="#">Contact</a>
-      <div class="cf-popover" style="display:none">
-        <p><strong>K2 Intellect LLP</strong></p>
-        <p>Nandanam, Chennai &#8211; 600008</p>
-        <p>Ph: <a href="tel:7358757104">7358757104</a></p>
-      </div>
     </span>
   </div>
 </div>
@@ -4455,54 +4226,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <button class="wa-finish-btn" onclick="closeWeakAreas()">✓ Done — Back to Home</button>
   </div>
 
-  <div class="compact-footer">
-    <p class="cf-summary">K2 Intellect is an educational platform for CFA&#174; exam preparation. Content is for learning purposes only and does not constitute investment advice.</p>
-    <div class="cf-links">
-      <a class="cf-link" onclick="window.open(K2_FULL_DISCLOSURE_URL,'_blank');return false;" href="#">Full Disclosure</a>
-      <span class="cf-pipe">|</span>
-      <a class="cf-link" onclick="window.open(K2_TERMS_URL,'_blank');return false;" href="#">Terms of Use</a>
-      <span class="cf-pipe">|</span>
-      <a class="cf-link" onclick="window.open(K2_PRIVACY_URL,'_blank');return false;" href="#">Privacy Policy</a>
-      <span class="cf-pipe">|</span>
-      <span class="cf-contact-wrap">
-        <a class="cf-link" onclick="k2ToggleContact(this);return false;" href="#">Contact</a>
-        <div class="cf-popover" style="display:none">
-          <p><strong>K2 Intellect LLP</strong></p>
-          <p>Nandanam, Chennai &#8211; 600008</p>
-          <p>Ph: <a href="tel:7358757104">7358757104</a></p>
-        </div>
       </span>
     </div>
   </div>
 </div>
 
-
-<script>
-// ── Compact Footer — URL constants (swap to real URLs when ready) ──
-const K2_FULL_DISCLOSURE_URL = '#full-disclosure';
-const K2_TERMS_URL            = '#terms';
-const K2_PRIVACY_URL          = '#privacy';
-
-// ── Contact popover toggle ──
-function k2ToggleContact(triggerEl) {
-  var wrap   = triggerEl.parentElement;
-  var popover = wrap.querySelector('.cf-popover');
-  if (!popover) return;
-  var isOpen = popover.style.display !== 'none';
-  // Close all other open popovers first
-  document.querySelectorAll('.cf-popover').forEach(function(p){ p.style.display = 'none'; });
-  popover.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) {
-    // Close when clicking outside
-    function outsideClick(e) {
-      if (!wrap.contains(e.target)) {
-        popover.style.display = 'none';
-        document.removeEventListener('click', outsideClick);
-      }
-    }
-    setTimeout(function(){ document.addEventListener('click', outsideClick); }, 0);
-  }
-}
-</script>
 </body>
 </html>
