@@ -1552,6 +1552,46 @@ const FORMULA_FAMILIES = [
 ];
 window.FORMULA_FAMILIES = FORMULA_FAMILIES;
 
+// Explicit sub-family → mastery chapterCode map.
+// Needed when the sub-family label doesn't fuzzy-match the mastery topic string
+// (e.g. acronyms, apostrophes, paraphrased labels).
+const SUBFAM_MAST_MAP = {
+  // Probability
+  'Bayes Theorem':               'MAST_BAYES',  // apostrophe in "Bayes' Theorem" breaks fuzzy
+  // Fixed Income
+  'Forward Rates':               'MAST_FWDR',   // mastery label is "Forward Rate Calculations"
+  // Forward Contracts
+  'Forward Price':               'MAST_FWDP',   // mastery label is "Forward Price Calculation"
+  'Forward Price with Dividends':'MAST_FWDP',
+  'Forward Value':               'MAST_FWDP',
+  'FX Forward':                  'MAST_FXFR',   // mastery label is "Forward Exchange Rate..."
+  'Bond Forward':                'MAST_FWDP',
+  // Long-Lived Assets
+  'Impairment IFRS':             'MAST_IMPL',   // mastery label is "Impairment Loss Calculation"
+  'Impairment GAAP':             'MAST_IMPL',
+  'Straight-Line Depreciation':  'MAST_DEPR',   // mastery label is "Depreciation Methods (SL, DDB, UOP)"
+  'DDB':                         'MAST_DEPR',
+  'Units of Production':         'MAST_DEPR',
+  // Inventory
+  'LIFO Reserve':                'MAST_LRES',   // mastery label is "LIFO Reserve Adjustments"
+  'LIFO Liquidation':            'MAST_LRES',   // LIFO liquidation relates to LIFO reserve
+  'Weighted Average':            'MAST_FLWA',   // mastery label is "FIFO vs LIFO vs Weighted Average"
+  // Financial Ratios
+  'DuPont Analysis':             'MAST_DUP5',   // mastery label is "DuPont Analysis 3-Factor and 5-Factor"
+  // Portfolio Mathematics
+  'Portfolio Variance':          'MAST_PSDV',   // mastery label is "Portfolio Standard Deviation and Variance"
+  '3-Asset Portfolio':           'MAST_PSDV',
+  'Minimum Variance':            'MAST_PSDV',
+  'Portfolio Return':            'MAST_TWMW',   // closest: time-weighted vs money-weighted covers HPR/portfolio return
+  // CAPM
+  'Beta':                        'MAST_BETA',   // mastery label is "Beta Calculation and Portfolio Beta"
+  'Beta Calculation':            'MAST_BETA',
+  'Market Model':                'MAST_BETA',   // market model is used to derive beta
+  'CML':                         'MAST_CML',    // acronym — mastery label is "Capital Market Line"
+  'SML vs CML':                  'MAST_SML',    // mastery label is "Security Market Line"
+};
+window.SUBFAM_MAST_MAP = SUBFAM_MAST_MAP;
+
 // Topic ids with formula families (config-driven, not live-scanned)
 const MASTERY_TOPIC_IDS = [...new Set(FORMULA_FAMILIES.map(f => f.topicId))];
 
@@ -2390,6 +2430,26 @@ function FinanceExamApp() {
                                 const t = (q.topic || '').toLowerCase();
                                 return t === sf || t.startsWith(sf) || t.includes(sf);
                               });
+                              // FIX: sub-family was showing only 8-10 formula_drill questions.
+                              // Also include mode=mastery questions for the same topic.
+                              // First check the explicit map for exact sub-family → chapterCode wiring
+                              // (handles acronyms, apostrophes, and label differences).
+                              // Fall back to fuzzy topic match for unmapped sub-families.
+                              const SUBFAM_MAST_MAP = window.SUBFAM_MAST_MAP || {};
+                              let masteryMatch;
+                              const explicitCode = SUBFAM_MAST_MAP[config.subFamily];
+                              if (explicitCode) {
+                                masteryMatch = data.filter(q => q.mode === 'mastery' && q.chapterCode === explicitCode);
+                              } else {
+                                masteryMatch = data.filter(q => {
+                                  if (q.mode !== 'mastery') return false;
+                                  const t = (q.topic || '').toLowerCase();
+                                  return t === sf || t.startsWith(sf) || t.includes(sf);
+                                });
+                              }
+                              if (masteryMatch.length > 0) {
+                                fdFiltered = [...fdFiltered, ...masteryMatch];
+                              }
                             } else if (config.chapter.endsWith('-all')) {
                               const topicId = config.chapter.replace('-all', '');
                               const famIds = new Set((window.FORMULA_FAMILIES || []).filter(f => f.topicId === topicId).map(f => f.id));
