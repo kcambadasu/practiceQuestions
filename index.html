@@ -5811,22 +5811,30 @@ async function doCreateTrial() {
   }
 }
 
-// Sign out — UI resets immediately; Firebase call fires in background
+// Sign out — fires Firebase signOut then reloads the page for a clean slate
 function doSignOut() {
-  // 1. Reset UI right now, synchronously — no waiting for Firebase
-  _userPlanData = null;
-  window._currentUser = null;
-  try { showLandingPage(); } catch(e) {}
+  // Disable all sign-out buttons and show feedback
+  var btns = document.querySelectorAll('.new-dash-signout, .btn-home-signout');
+  btns.forEach(function(b) { b.disabled = true; b.textContent = 'Signing out…'; });
 
-  // 2. Tell Firebase to sign out in the background
+  function doReload() {
+    window.location.reload();
+  }
+
   try {
     if (window._fbFns && window._fbAuth) {
-      window._fbFns.signOut(window._fbAuth).catch(function(e) {
-        console.warn('Firebase signOut error:', e);
-      });
+      window._fbFns.signOut(window._fbAuth)
+        .then(doReload)
+        .catch(function(e) {
+          console.warn('Firebase signOut error:', e);
+          doReload();
+        });
+    } else {
+      doReload();
     }
   } catch(e) {
     console.warn('doSignOut error:', e);
+    doReload();
   }
 }
 
