@@ -6017,11 +6017,11 @@ async function updateStreak(uid) {
     await updateDoc(doc(db, 'users', uid), { currentStreak: streak, longestStreak: best, lastStudyDate: today });
     // Milestones
     if ([7,14,30,50,100].includes(streak)) {
-      showToast('🔥 ' + streak + '-day streak! You're building a great habit.');
+      showToast("🔥 " + streak + "-day streak! You're building a great habit.");
       trackEvent('streak_milestone', { streak_days: streak });
-      queueEmail(_userPlanData?.email, '🔥 ' + streak + '-day streak! You're on a roll',
+      queueEmail(_userPlanData?.email, "🔥 " + streak + "-day streak! You're on a roll",
         buildEmailTemplate(streak + '-Day Streak!', (_userPlanData?.name || 'Candidate'),
-          '<p>You've maintained a <strong>' + streak + '-day study streak</strong>. Keep it up!</p>',
+          "<p>You've maintained a <strong>" + streak + "-day study streak</strong>. Keep it up!</p>",
           'Continue Practising', 'https://k2intellect.com'));
     }
     incrementPlatformStat('activeStreaks', 0); // just update
@@ -6499,9 +6499,9 @@ function showComingSoon(featureName, icon, desc) {
   const descEl = document.getElementById('comingSoonDesc');
   if (title) title.textContent = featureName + ' — Coming Soon';
   if (iconEl) iconEl.textContent = icon || '🎓';
-  if (descEl) descEl.textContent = desc || 'We're working on this feature. Check back soon!';
+  if (descEl) descEl.textContent = desc || "We're working on this feature. Check back soon!";
   modal.classList.add('open');
-  showToast('Coming soon! We're working on ' + featureName);
+  showToast("Coming soon! We're working on " + featureName);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -6566,7 +6566,7 @@ async function saveBlogSubscriber() {
   try {
     const { collection, addDoc } = window._fbFns;
     await addDoc(collection(window._fbDb, 'blogSubscribers'), { email, subscribedAt: new Date() });
-    showToast('Subscribed! We'll notify you when new articles are published. 📧');
+    showToast("Subscribed! We'll notify you when new articles are published. 📧");
     if (emailEl) emailEl.value = '';
   } catch(e) { showToast('Could not save. Please try again.'); }
 }
