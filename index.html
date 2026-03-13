@@ -1794,14 +1794,21 @@ footer{
 .mode-card { position: relative; overflow: hidden; }
 .mc-lock-overlay {
   position: absolute; inset: 0; z-index: 10;
-  background: rgba(10,22,40,0.88);
-  backdrop-filter: blur(3px);
+  background: rgba(10,22,40,0.90);
+  backdrop-filter: blur(4px);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 8px; padding: 24px; text-align: center;
+  gap: 10px; padding: 24px; text-align: center;
   border-radius: inherit;
 }
-.mc-lock-icon { font-size: 2.4rem; line-height: 1; }
+.mc-lock-overlay.hidden { display: none; }
+.mc-lock-icon { font-size: 2.6rem; line-height: 1; margin-bottom: 2px; }
+.mc-lock-badge {
+  display: inline-block; padding: 3px 12px;
+  background: rgba(201,168,76,0.18); border: 1px solid rgba(201,168,76,0.4);
+  border-radius: 20px; color: #C9A84C; font-size: 0.72rem;
+  font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
 .mc-lock-msg  { color: #C9A84C; font-size: 1rem; font-weight: 700; }
 .mc-lock-sub  { color: rgba(255,255,255,0.65); font-size: 0.82rem; line-height: 1.4; }
 .mc-lock-upgrade-btn {
@@ -2731,11 +2738,12 @@ footer{
       </div>
       <div class="mode-card practice anim-5" id="modeCardChapter" onclick="tryPracticeChapter()">
         <!-- Lock overlay shown for free/trial users -->
-        <div class="mc-lock-overlay" id="mcLockOverlay" style="display:none">
+        <div class="mc-lock-overlay" id="mcLockOverlay">
           <div class="mc-lock-icon">🔒</div>
-          <div class="mc-lock-msg">Full Access Plan</div>
-          <div class="mc-lock-sub">Upgrade to unlock chapter-by-chapter practice</div>
-          <button class="mc-lock-upgrade-btn" onclick="event.stopPropagation();openAuthModal('subscribe')">Upgrade →</button>
+          <div class="mc-lock-badge">Full Access Only</div>
+          <div class="mc-lock-msg">Chapter Practice is locked</div>
+          <div class="mc-lock-sub">Upgrade to Full Access to practise by topic &amp; chapter at your own pace.</div>
+          <button class="mc-lock-upgrade-btn" onclick="event.stopPropagation();openAuthModal('subscribe')">Upgrade to Unlock →</button>
         </div>
         <div class="mc-icon">📚</div>
         <div class="mc-label">Practice Session</div>
@@ -6724,20 +6732,22 @@ window.startDailyChallenge = startDailyChallenge;
 // ── Mode card: chapter lock for free/trial users ──
 function initModeCards() {
   var plan = (typeof getUserPlan === 'function') ? getUserPlan() : 'trial';
-  var isFree = (plan === 'trial' || plan === 'expired');
+  var isPaid = (plan === 'paid' || plan === 'paid_ai');
   var overlay = document.getElementById('mcLockOverlay');
   var card    = document.getElementById('modeCardChapter');
-  if (overlay) overlay.style.display = isFree ? 'flex' : 'none';
-  if (card)    card.style.cursor      = isFree ? 'default' : 'pointer';
+  // Show lock for everyone EXCEPT paid users
+  if (overlay) {
+    if (isPaid) overlay.classList.add('hidden');
+    else overlay.classList.remove('hidden');
+  }
+  if (card) card.style.cursor = isPaid ? 'pointer' : 'default';
 }
 window.initModeCards = initModeCards;
 
 function tryPracticeChapter() {
   var plan = (typeof getUserPlan === 'function') ? getUserPlan() : 'trial';
-  if (plan === 'trial' || plan === 'expired') {
-    // Already showing lock overlay - do nothing (card click blocked)
-    return;
-  }
+  var isPaid = (plan === 'paid' || plan === 'paid_ai');
+  if (!isPaid) return; // lock overlay handles visual feedback
   showPracticeConfig();
 }
 window.tryPracticeChapter = tryPracticeChapter;
