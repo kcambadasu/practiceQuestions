@@ -3491,7 +3491,10 @@ function selectSubFamily(val) {
   updateStartBtn();
 }
 
-// toggleShuffle removed - shuffle is always on
+// Shuffle is always on — toggleShuffle is a no-op kept for button compatibility
+function toggleShuffle() {
+  // shuffle is hardcoded to true; this toggle is decorative
+}
 
 function toggleMastery() {
   masteryOn = !masteryOn;
@@ -5811,10 +5814,15 @@ async function doCreateTrial() {
 // Sign out
 async function doSignOut() {
   try {
-    await window._fbFns.signOut(window._fbAuth);
-    _userPlanData = null;
-    showLandingPage();
-  } catch(e) {}
+    if (window._fbFns && window._fbAuth) {
+      await window._fbFns.signOut(window._fbAuth);
+    }
+  } catch(e) {
+    console.warn('Firebase signOut error:', e);
+  }
+  // Always reset UI regardless of Firebase result
+  _userPlanData = null;
+  showLandingPage();
 }
 
 // Legacy sign-out compatibility
