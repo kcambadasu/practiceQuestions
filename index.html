@@ -5762,10 +5762,11 @@ function showLandingPage() {
   const lp = document.getElementById('landingPage');
   const dp = document.getElementById('dashPanel');
   const hp = document.getElementById('homePanel');
-  if (lp) { lp.classList.add('visible'); lp.classList.remove('page-fade-out'); }
+  if (lp) { lp.classList.add('visible'); lp.classList.remove('page-fade-out'); lp.style.display = 'block'; }
   if (dp) dp.classList.remove('active');
   if (hp) hp.classList.add('hidden');
-  document.getElementById('examPanel').classList.remove('active');
+  const ep = document.getElementById('examPanel');
+  if (ep) ep.classList.remove('active');
 }
 
 // Override _showLogin to use new landing page
@@ -5776,7 +5777,10 @@ window._showLogin = function() {
 // Override _showDashboard to use new dashboard
 window._showDashboard = async function(user) {
   const lp = document.getElementById('landingPage');
-  if (lp) { lp.classList.add('page-fade-out'); setTimeout(() => lp.classList.remove('visible'), 400); }
+  if (lp) {
+    lp.classList.add('page-fade-out');
+    setTimeout(() => { lp.classList.remove('visible'); lp.style.display = 'none'; lp.classList.remove('page-fade-out'); }, 400);
+  }
   document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('examPanel').classList.remove('active');
   const dp = document.getElementById('dashPanel');
@@ -6625,7 +6629,7 @@ window._homeResumeSession = function() {
 };
 
 window._showHome = function() {
-  document.getElementById('loginPanel').classList.add('hidden');
+  // loginPanel replaced by landingPage
   document.getElementById('dashPanel').classList.remove('active');
   document.getElementById('homePanel').classList.remove('hidden');
   window._updateHomeSavedSessionCard();
@@ -7092,9 +7096,12 @@ window._refreshDashStats = function() {
   window._buildDashSubjects();
 };
 
-// ── Initially hide homePanel until auth resolves ──
+// ── Show landing page immediately, hide other panels ──
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('homePanel').classList.add('hidden');
+  // Show landing page by default while Firebase auth resolves
+  const lp = document.getElementById('landingPage');
+  if (lp) lp.classList.add('visible');
   document.getElementById('examPanel').classList.remove('active');
 });
 </script>
