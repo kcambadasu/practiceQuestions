@@ -993,13 +993,21 @@ footer{
 
 /* ── SCROLL REVEAL ── */
 .reveal {
-  opacity: 0; transform: translateY(30px);
+  opacity: 1; transform: translateY(0);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
-.reveal.revealed { opacity: 1; transform: translateY(0); }
-.reveal-child { opacity: 0; transform: translateY(20px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
-.reveal-child.revealed { opacity: 1; transform: translateY(0); }
+.reveal.will-reveal {
+  opacity: 0; transform: translateY(30px);
+}
+.reveal.will-reveal.revealed { opacity: 1; transform: translateY(0); }
+.reveal-child {
+  opacity: 1; transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.reveal-child.will-reveal {
+  opacity: 0; transform: translateY(20px);
+}
+.reveal-child.will-reveal.revealed { opacity: 1; transform: translateY(0); }
 
 /* ── SECTION COMMON ── */
 .lp-section {
@@ -5762,7 +5770,12 @@ function showLandingPage() {
   const lp = document.getElementById('landingPage');
   const dp = document.getElementById('dashPanel');
   const hp = document.getElementById('homePanel');
-  if (lp) { lp.classList.add('visible'); lp.classList.remove('page-fade-out'); lp.style.display = 'block'; }
+  if (lp) {
+    lp.classList.add('visible');
+    lp.classList.remove('page-fade-out');
+    lp.style.display = 'block';
+    setTimeout(initScrollReveal, 50);
+  }
   if (dp) dp.classList.remove('active');
   if (hp) hp.classList.add('hidden');
   const ep = document.getElementById('examPanel');
@@ -6513,14 +6526,20 @@ function animateCountUps() {
 
 // Intersection Observer for scroll reveals
 function initScrollReveal() {
+  // Mark all reveal elements as will-reveal (hidden) before observing
+  document.querySelectorAll('.reveal, .reveal-child').forEach(el => {
+    el.classList.add('will-reveal');
+    el.classList.remove('revealed');
+  });
+
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry, i) => {
+    entries.forEach(entry => {
       if (entry.isIntersecting) {
         entry.target.classList.add('revealed');
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.15 });
+  }, { threshold: 0.1 });
 
   document.querySelectorAll('.reveal, .reveal-child').forEach(el => {
     observer.observe(el);
@@ -7101,7 +7120,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('homePanel').classList.add('hidden');
   // Show landing page by default while Firebase auth resolves
   const lp = document.getElementById('landingPage');
-  if (lp) lp.classList.add('visible');
+  if (lp) {
+    lp.classList.add('visible');
+    lp.style.display = 'block';
+    // Now that landing page is visible, init scroll reveal
+    setTimeout(initScrollReveal, 50);
+  }
   document.getElementById('examPanel').classList.remove('active');
 });
 </script>
