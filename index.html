@@ -1578,6 +1578,10 @@ footer{
   cursor: pointer; transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 .dc-start-btn:hover { background: #e8c97a; transform: translateY(-2px); }
+.dc-drill-desc {
+  font-size: 0.75rem; color: rgba(255,255,255,0.38); margin-top: 8px;
+  line-height: 1.5; max-width: 380px;
+}
 .dc-complete-badge { color: #2ed573; font-weight: 700; font-size: 0.95rem; }
 .dc-countdown-text { font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-top: 8px; }
 
@@ -2506,7 +2510,8 @@ footer{
         </div>
         <div class="dc-sub" id="dcSubText">20 questions · Focused on your selected weak areas</div>
         <div class="dc-topics" id="dcTopics"></div>
-        <button class="dc-start-btn" id="dcStartBtn" onclick="startDailyChallenge()">Start Challenge →</button>
+        <button class="dc-start-btn" id="dcStartBtn" onclick="startDailyChallenge()">Start Today's Drill →</button>
+        <div class="dc-drill-desc">20 adaptive questions picked from your weakest topics — resets every day at midnight.</div>
         <div class="dc-countdown-text" id="dcCountdownText"></div>
         <div id="dcTodayScore" style="display:none;font-size:0.85rem;color:rgba(255,255,255,0.6);margin-top:6px"></div>
       </div>
@@ -3072,6 +3077,21 @@ function totalAvailableQuestions() {
 
 // Expose to React app
 window.TOPICS_REF = Object.fromEntries(TOPICS.map(t => [t.id, t.chapters]));
+// topic id → label (e.g. 'quant' → 'Quantitative Methods') — used for progress subcollection keys
+window._TOPIC_LABEL_MAP = Object.fromEntries(TOPICS.map(t => [t.id, t.label]));
+// topic label → id — reverse lookup
+window._TOPIC_ID_BY_LABEL = Object.fromEntries(TOPICS.map(t => [t.label, t.id]));
+// chapterLabel / chapterId → parent topic id — for per-question topic attribution
+window._CH_TO_TOPIC_ID = (function() {
+  var m = {};
+  TOPICS.forEach(function(t) {
+    t.chapters.forEach(function(ch) {
+      m[ch.label] = t.id;
+      m[ch.id]    = t.id;
+    });
+  });
+  return m;
+})();
 // Map chapter UI ids → chapter field values used in questions.js
 window.CHAPTER_ID_MAP = {
   'fsa-1':'FSA','fsa-2':'FSA-2','fsa-3':'FSA-3','fsa-4':'FSA-4','fsa-5':'FSA-5',
@@ -4123,6 +4143,36 @@ function FinanceExamApp() {
                             return;
                           }
 
+                          // ── Weak-chapter adaptive filter (daily challenge) ──
+                          // When EXAM_CONFIG.weakChapters is set, filter questions to only those
+                          // topics. Falls back to all chapters if filtered pool is too small.
+                          if (config.weakChapters && config.weakChapters.length > 0) {
+                            const weakIds = new Set(config.weakChapters);
+                            const validLabels  = new Set();
+                            const validChIds   = new Set();
+                            Object.entries(window.TOPICS_REF || {}).forEach(([topicId, chapters]) => {
+                              if (weakIds.has(topicId)) {
+                                chapters.forEach(ch => {
+                                  validLabels.add(ch.label);
+                                  validChIds.add(ch.id);
+                                });
+                              }
+                            });
+                            const idMap       = window.CHAPTER_ID_MAP || {};
+                            const validMapped = new Set([...validChIds].map(id => idMap[id]).filter(Boolean));
+                            const weakFiltered = filtered.filter(q =>
+                              validLabels.has(q.chapterName)    ||
+                              validChIds.has(q.chapter)         ||
+                              validMapped.has(String(q.chapter))
+                            );
+                            // Only use the weak-chapter pool if it's large enough for the limit
+                            const neededMin = (config.dailyLimit || 20);
+                            if (weakFiltered.length >= neededMin) {
+                              filtered = weakFiltered;
+                            }
+                            // else: silently fall back to full bank (enough variety for today)
+                          }
+
                           // Formula Drill Only mode — restrict to formula_drill question type
                           if (config.formulaDrillOnly) {
                             filtered = filtered.filter(q => q.questionType === 'formula_drill');
@@ -4220,6 +4270,10 @@ function FinanceExamApp() {
                         correct: scoreData,
                         date: new Date().toISOString()
                     });
+                }
+                // ── Save per-topic progress for adaptive daily challenge targeting ──
+                if (window._saveTopicProgress) {
+                    window._saveTopicProgress(questions, answers);
                 }
             }, [showResults]);
 
@@ -6107,10 +6161,62 @@ async function updateStreak(uid) {
   } catch(e) {}
 }
 
+// ── Save per-topic progress after each session ──
+// Called from React results screen with the completed questions + answers map.
+// Increments users/{uid}/progress/{topicLabel} docs (attempted / correct).
+window._saveTopicProgress = async function(questions, answers) {
+  var user = window._currentUser;
+  if (!user || !questions || !questions.length) return;
+  try {
+    var db  = window._fbDb;
+    var fns = window._fbFns;
+    var chToTopicId    = window._CH_TO_TOPIC_ID    || {};
+    var topicLabelMap  = window._TOPIC_LABEL_MAP   || {};
+
+    // Aggregate per-topic stats from this session
+    var topicStats = {}; // topicLabel → { attempted, correct }
+    questions.forEach(function(q) {
+      var topicId    = chToTopicId[q.chapterName] || chToTopicId[q.chapter] || '';
+      var topicLabel = topicId ? (topicLabelMap[topicId] || topicId) : 'Other';
+      if (!topicStats[topicLabel]) topicStats[topicLabel] = { attempted: 0, correct: 0, topicId: topicId };
+      topicStats[topicLabel].attempted++;
+      var ans = answers[q.id];
+      if (ans && ans.selected === q.correctAnswer) topicStats[topicLabel].correct++;
+    });
+
+    // Write to Firestore — increment existing doc or create new one
+    var writes = Object.entries(topicStats).map(async function(entry) {
+      var label = entry[0]; var stats = entry[1];
+      if (label === 'Other') return; // skip unrecognised
+      var ref  = fns.doc(db, 'users', user.uid, 'progress', label);
+      var snap = await fns.getDoc(ref);
+      if (snap.exists()) {
+        var d = snap.data();
+        await fns.updateDoc(ref, {
+          attempted: (d.attempted || 0) + stats.attempted,
+          correct:   (d.correct   || 0) + stats.correct,
+          chapterId: label
+        });
+      } else {
+        await fns.setDoc(ref, {
+          chapterId:      label,
+          topicId:        stats.topicId,
+          attempted:      stats.attempted,
+          correct:        stats.correct,
+          totalQuestions: 900
+        });
+      }
+    });
+    await Promise.all(writes);
+  } catch(e) {
+    console.warn('_saveTopicProgress error:', e);
+  }
+};
+
 // ── Daily Challenge ──
 async function loadDailyChallenge(uid) {
   try {
-    const { doc, getDoc } = window._fbFns;
+    const { doc, getDoc, collection, getDocs } = window._fbFns;
     const db = window._fbDb;
     const snap = await getDoc(doc(db, 'users', uid));
     const d = snap.exists() ? snap.data() : {};
@@ -6121,39 +6227,90 @@ async function loadDailyChallenge(uid) {
     const countdownEl = document.getElementById('dcCountdownText');
     const scoreEl = document.getElementById('dcTodayScore');
     const subEl = document.getElementById('dcSubText');
+
+    // ── Completed-today gate ──
     if (d.lastChallengeDate === today) {
-      // Already completed
       if (startBtn) startBtn.style.display = 'none';
       if (completeBadge) completeBadge.style.display = 'block';
       if (scoreEl && d.lastChallengeScore) {
         scoreEl.style.display = 'block';
         scoreEl.textContent = 'You scored ' + d.lastChallengeScore.correct + ' / ' + d.lastChallengeScore.total + ' (' + Math.round(d.lastChallengeScore.pct) + '%) · Come back tomorrow!';
       }
-      // Countdown to midnight
       if (countdownEl) {
         const now = new Date();
-        const midnight = new Date(now);
-        midnight.setHours(24,0,0,0);
+        const midnight = new Date(now); midnight.setHours(24,0,0,0);
         const diffMs = midnight - now;
         const h = Math.floor(diffMs/3600000);
         const m = Math.floor((diffMs%3600000)/60000);
         countdownEl.textContent = 'Next challenge in ' + h + 'h ' + m + 'm';
       }
     }
-    // Show focus topics
-    const topics = d.selfRatedWeakTopics || [];
+
+    // ── Compute weak topics from progress subcollection ──
     const sessionCount = d.sessionsCompleted || 0;
+    const topicIdByLabel = window._TOPIC_ID_BY_LABEL || {};
+    let weakTopicIds   = [];   // e.g. ['fi', 'quant', 'econ']
+    let weakTopicNames = [];   // for UI chips, e.g. ['Fixed Income', 'Quantitative Methods']
+
+    try {
+      const progSnaps = await getDocs(collection(db, 'users', uid, 'progress'));
+      if (!progSnaps.empty) {
+        const chapterAcc = [];
+        progSnaps.forEach(s => {
+          const pd = s.data();
+          if (pd.attempted >= 5) {          // need ≥5 attempts to be meaningful
+            const acc = pd.correct / pd.attempted;
+            const tid = pd.topicId || topicIdByLabel[s.id] || '';
+            chapterAcc.push({ label: s.id, topicId: tid, acc });
+          }
+        });
+
+        // Sort by accuracy ascending, take up to 3 with accuracy < 60%
+        const maxWeak = sessionCount >= 14 ? 3 : 5; // narrower targeting after 14 sessions
+        const weak = chapterAcc
+          .filter(c => c.acc < 0.6 && c.topicId)
+          .sort((a, b) => a.acc - b.acc)
+          .slice(0, maxWeak);
+
+        weakTopicIds   = [...new Set(weak.map(c => c.topicId))];
+        weakTopicNames = weak.map(c => c.label);
+      }
+    } catch(progErr) {
+      console.warn('loadDailyChallenge: progress fetch error', progErr);
+    }
+
+    // Store for startDailyChallenge to consume
+    window._dcWeakTopicIds   = weakTopicIds;
+    window._dcWeakTopicNames = weakTopicNames;
+
+    // ── UI: topic chips ──
+    const selfRatedTopics = d.selfRatedWeakTopics || [];
     const topicsEl = document.getElementById('dcTopics');
     if (topicsEl) {
-      const focusTopics = sessionCount >= 14 ? ['Based on your performance'] : (topics.length ? topics.slice(0,3) : ['All Topics']);
+      let focusTopics;
+      if (weakTopicNames.length > 0) {
+        // Real performance data available — show actual weak topics
+        focusTopics = weakTopicNames.slice(0, 3);
+      } else if (selfRatedTopics.length > 0) {
+        // Fall back to self-rated from onboarding
+        focusTopics = selfRatedTopics.slice(0, 3);
+      } else {
+        focusTopics = ['All Topics'];
+      }
       topicsEl.innerHTML = focusTopics.map(t => `<span class="dc-topic-chip">${t}</span>`).join('');
     }
+
+    // ── UI: sub-text ──
     if (subEl) {
-      subEl.textContent = sessionCount >= 14
-        ? '20 questions · Targeting your 3 weakest chapters'
-        : '20 questions · Focused on your selected weak areas';
+      if (weakTopicNames.length > 0 && sessionCount >= 14) {
+        subEl.textContent = '20 questions · Targeting your ' + weakTopicIds.length + ' weakest topic' + (weakTopicIds.length > 1 ? 's' : '');
+      } else if (weakTopicNames.length > 0) {
+        subEl.textContent = '20 questions · Focused on your weak areas';
+      } else {
+        subEl.textContent = '20 questions · Across all CFA Level I topics';
+      }
     }
-  } catch(e) {}
+  } catch(e) { console.warn('loadDailyChallenge error', e); }
 }
 
 function startDailyChallenge() {
@@ -6163,7 +6320,16 @@ function startDailyChallenge() {
     return;
   }
   // Launch quiz with daily challenge config (20 questions from dashboard card)
-  window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 20 };
+  // If weak topics have been identified by loadDailyChallenge, target those;
+  // otherwise fall back to random from all chapters.
+  var weakIds = window._dcWeakTopicIds || [];
+  window.EXAM_CONFIG = {
+    chapter:        'all',
+    shuffle:        true,
+    dailyChallenge: true,
+    dailyLimit:     20,
+    weakChapters:   weakIds.length > 0 ? weakIds : null
+  };
   var lp = document.getElementById('landingPage');
   var dp = document.getElementById('dashPanel');
   var hp = document.getElementById('homePanel');
