@@ -2495,7 +2495,7 @@ footer{
         <div class="welcome-name">Good <em id="welcomeTimeOfDay">morning</em>, <em id="welcomeFirstName">there</em>!</div>
         <div class="welcome-date" id="welcomeDate"></div>
         <div class="welcome-quote" id="welcomeQuote"></div>
-        <button class="welcome-start-btn" onclick="window._showHome()">Start a New Challenge →</button>
+        <button class="welcome-start-btn" onclick="launchDailyChallenge()">Start a New Challenge →</button>
 
         <!-- Exam Countdown -->
         <div class="countdown-widget" id="countdownWidget">
@@ -5621,21 +5621,31 @@ function closeAIUpgradeModal() {
 // AUTH MODAL
 // ══════════════════════════════════════════════════════════
 function openAuthModal(tab) {
-  document.getElementById('authModal').classList.add('open');
+  var m = document.getElementById('authModal');
+  if (!m) { console.error('authModal not found'); return; }
+  m.style.display = 'flex';
+  m.classList.add('open');
   if (tab) switchAuthTab(tab);
-  updateAllPrices();
+  try { updateAllPrices(); } catch(e) { console.warn('updateAllPrices error', e); }
 }
+window.openAuthModal = openAuthModal;
+
 function closeAuthModal() {
-  document.getElementById('authModal').classList.remove('open');
+  var m = document.getElementById('authModal');
+  if (m) { m.classList.remove('open'); m.style.display = ''; }
 }
+window.closeAuthModal = closeAuthModal;
+
 function switchAuthTab(tab) {
-  ['signin','trial','subscribe'].forEach(t => {
-    const btn = document.getElementById('authTab' + t.charAt(0).toUpperCase() + t.slice(1));
-    const pane = document.getElementById('authPane' + t.charAt(0).toUpperCase() + t.slice(1));
+  ['signin','trial','subscribe'].forEach(function(t) {
+    var btn = document.getElementById('authTab' + t.charAt(0).toUpperCase() + t.slice(1));
+    var pane = document.getElementById('authPane' + t.charAt(0).toUpperCase() + t.slice(1));
     if (btn) btn.classList.toggle('active', t === tab);
     if (pane) pane.classList.toggle('active', t === tab);
   });
 }
+window.switchAuthTab = switchAuthTab;
+
 document.addEventListener('click', function(e) {
   if (e.target.id === 'authModal') closeAuthModal();
 });
@@ -6078,12 +6088,27 @@ async function loadDailyChallenge(uid) {
 }
 
 function startDailyChallenge() {
-  // Launch quiz with daily challenge config
+  // Launch quiz with daily challenge config (20 questions from dashboard)
   window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 20 };
   document.getElementById('dashPanel').classList.remove('active');
   document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('examPanel').classList.add('active');
-  if (window.loadExam) window.loadExam();
+  document.body.style.overflow = 'hidden';
+  if (typeof window.mountReact !== 'function') {
+    alert('Still loading, please wait a moment and try again.');
+    document.getElementById('examPanel').classList.remove('active');
+    document.getElementById('dashPanel').classList.add('active');
+    document.body.style.overflow = '';
+    return;
+  }
+  if (!reactMounted) {
+    window.mountReact();
+    reactMounted = true;
+  } else {
+    document.getElementById('app').innerHTML = '';
+    reactMounted = false;
+    setTimeout(function() { window.mountReact(); reactMounted = true; }, 50);
+  }
 }
 
 // ── Spaced Repetition ──
@@ -6107,8 +6132,24 @@ function startSpacedReview() {
   if (!requireFeature('chapter_practice', 'Spaced Review')) return;
   window.EXAM_CONFIG = { chapter: 'all', shuffle: true, spacedReview: true };
   document.getElementById('dashPanel').classList.remove('active');
+  document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('examPanel').classList.add('active');
-  if (window.loadExam) window.loadExam();
+  document.body.style.overflow = 'hidden';
+  if (typeof window.mountReact !== 'function') {
+    alert('Still loading, please wait a moment and try again.');
+    document.getElementById('examPanel').classList.remove('active');
+    document.getElementById('dashPanel').classList.add('active');
+    document.body.style.overflow = '';
+    return;
+  }
+  if (!reactMounted) {
+    window.mountReact();
+    reactMounted = true;
+  } else {
+    document.getElementById('app').innerHTML = '';
+    reactMounted = false;
+    setTimeout(function() { window.mountReact(); reactMounted = true; }, 50);
+  }
 }
 
 async function updateSpacedRepetition(uid, questionId, correct) {
@@ -6216,8 +6257,24 @@ function drillBookmarks() {
   if (!requireFeature('chapter_practice', 'Bookmark Drill')) return;
   window.EXAM_CONFIG = { chapter: 'all', shuffle: true, drillBookmarks: true };
   document.getElementById('dashPanel').classList.remove('active');
+  document.getElementById('homePanel').classList.add('hidden');
   document.getElementById('examPanel').classList.add('active');
-  if (window.loadExam) window.loadExam();
+  document.body.style.overflow = 'hidden';
+  if (typeof window.mountReact !== 'function') {
+    alert('Still loading, please wait a moment and try again.');
+    document.getElementById('examPanel').classList.remove('active');
+    document.getElementById('dashPanel').classList.add('active');
+    document.body.style.overflow = '';
+    return;
+  }
+  if (!reactMounted) {
+    window.mountReact();
+    reactMounted = true;
+  } else {
+    document.getElementById('app').innerHTML = '';
+    reactMounted = false;
+    setTimeout(function() { window.mountReact(); reactMounted = true; }, 50);
+  }
 }
 
 // ── Referral ──
@@ -6602,6 +6659,32 @@ document.addEventListener('DOMContentLoaded', () => {
   initOfflineDetection();
   updateAllPrices();
 });
+
+// Expose all onclick-called functions to window
+window.doAuthSignIn = doAuthSignIn;
+window.doAuthGoogle = doAuthGoogle;
+window.doAuthGoogleTrial = doAuthGoogleTrial;
+window.doCreateTrial = doCreateTrial;
+window.doSignOut = doSignOut;
+window.openUpgradeModal = openUpgradeModal;
+window.closeUpgradeModal = closeUpgradeModal;
+window.openAIUpgradeModal = openAIUpgradeModal;
+window.closeAIUpgradeModal = closeAIUpgradeModal;
+window.showComingSoon = showComingSoon;
+window.showToast = showToast;
+window.copyReferralCode = copyReferralCode;
+window.openExamDatePicker = openExamDatePicker;
+window.openOnboarding = openOnboarding;
+window.drillBookmarks = drillBookmarks;
+window.removeBookmark = removeBookmark;
+window.startDailyChallenge = startDailyChallenge;
+window.startSpacedReview = startSpacedReview;
+window.saveBlogSubscriber = saveBlogSubscriber;
+window.setCurrency = setCurrency;
+window.setPlanBilling = setPlanBilling;
+window.checkFeatureAccess = checkFeatureAccess;
+window.onAIBotClick = onAIBotClick;
+
 
 </script>
 
