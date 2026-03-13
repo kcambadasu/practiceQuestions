@@ -1789,6 +1789,30 @@ footer{
 #comingSoonModal { display:none; position:fixed; inset:0; z-index:2150; background:rgba(0,0,0,0.7);
   align-items:center; justify-content:center; padding:20px; }
 #comingSoonModal.open { display:flex; }
+
+/* ── Chapter lock overlay (free / trial users) ── */
+.mode-card { position: relative; overflow: hidden; }
+.mc-lock-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(10,22,40,0.88);
+  backdrop-filter: blur(3px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px; padding: 24px; text-align: center;
+  border-radius: inherit;
+}
+.mc-lock-icon { font-size: 2.4rem; line-height: 1; }
+.mc-lock-msg  { color: #C9A84C; font-size: 1rem; font-weight: 700; }
+.mc-lock-sub  { color: rgba(255,255,255,0.65); font-size: 0.82rem; line-height: 1.4; }
+.mc-lock-upgrade-btn {
+  margin-top: 8px; padding: 9px 22px;
+  background: linear-gradient(135deg,#C9A84C,#a07c30);
+  border: none; border-radius: 8px;
+  color: #0A1628; font-weight: 700; font-size: 0.88rem;
+  cursor: pointer; transition: opacity .2s;
+}
+.mc-lock-upgrade-btn:hover { opacity: 0.85; }
+
 </style>
 
 <!-- ══ FIREBASE SDK ══ -->
@@ -2495,7 +2519,7 @@ footer{
         <div class="welcome-name">Good <em id="welcomeTimeOfDay">morning</em>, <em id="welcomeFirstName">there</em>!</div>
         <div class="welcome-date" id="welcomeDate"></div>
         <div class="welcome-quote" id="welcomeQuote"></div>
-        <button class="welcome-start-btn" onclick="launchDailyChallenge()">Start a New Challenge →</button>
+        <button class="welcome-start-btn" onclick="window._showHome()">Start a New Challenge →</button>
 
         <!-- Exam Countdown -->
         <div class="countdown-widget" id="countdownWidget">
@@ -2705,13 +2729,20 @@ footer{
         <div class="mc-tags"><span class="mc-tag">50 Questions</span><span class="mc-tag">All Topics</span><span class="mc-tag">Weak Area Review</span><span class="mc-tag">~75 min</span></div>
         <button class="mc-cta" onclick="event.stopPropagation();launchDailyChallenge()">Start Challenge →</button>
       </div>
-      <div class="mode-card practice anim-5" onclick="showPracticeConfig()">
+      <div class="mode-card practice anim-5" id="modeCardChapter" onclick="tryPracticeChapter()">
+        <!-- Lock overlay shown for free/trial users -->
+        <div class="mc-lock-overlay" id="mcLockOverlay" style="display:none">
+          <div class="mc-lock-icon">🔒</div>
+          <div class="mc-lock-msg">Full Access Plan</div>
+          <div class="mc-lock-sub">Upgrade to unlock chapter-by-chapter practice</div>
+          <button class="mc-lock-upgrade-btn" onclick="event.stopPropagation();openAuthModal('subscribe')">Upgrade →</button>
+        </div>
         <div class="mc-icon">📚</div>
         <div class="mc-label">Practice Session</div>
         <h3 class="mc-title">Focus on a<br>Chapter</h3>
         <p class="mc-desc">Choose a specific topic area and chapter, set your preferences, and drill questions at your own pace with full results.</p>
         <div class="mc-tags"><span class="mc-tag">Topic + Chapter</span><span class="mc-tag">Shuffleable</span><span class="mc-tag">Your Pace</span><span class="mc-tag">Full Results</span></div>
-        <button class="mc-cta" onclick="event.stopPropagation();showPracticeConfig()">Choose Chapter →</button>
+        <button class="mc-cta" id="modeCardChapterBtn" onclick="event.stopPropagation();tryPracticeChapter()">Choose Chapter →</button>
       </div>
     </div>
   </section>
@@ -3609,21 +3640,29 @@ window.goToHome = function() {
 // ── Daily Challenge ──────────────────────────────────────
 function launchDailyChallenge() {
   try {
-    window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 50 };
-    document.getElementById('homePanel').classList.add('hidden');
-    document.getElementById('examPanel').classList.add('active');
-    document.body.style.overflow = 'hidden';
+    // Check mountReact FIRST – before switching panels – to avoid blank white flash
     if (typeof window.mountReact !== 'function') {
-      console.error('mountReact is not yet available — Babel may still be loading.');
       alert('Still loading, please wait a moment and try again.');
-      // Revert panel state
-      document.getElementById('examPanel').classList.remove('active');
-      document.getElementById('homePanel').classList.remove('hidden');
-      document.body.style.overflow = '';
       return;
     }
-    if (!reactMounted) { window.mountReact(); reactMounted = true; }
-    else { document.getElementById('app').innerHTML = ''; reactMounted = false; setTimeout(() => { window.mountReact(); reactMounted = true; }, 50); }
+    window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 50 };
+    // Hide every panel, then show exam
+    var lp = document.getElementById('landingPage');
+    var dp = document.getElementById('dashPanel');
+    var hp = document.getElementById('homePanel');
+    var ep = document.getElementById('examPanel');
+    if (lp) { lp.classList.remove('visible'); lp.style.display = 'none'; }
+    if (dp) dp.classList.remove('active');
+    if (hp) hp.classList.add('hidden');
+    if (ep) ep.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    if (!reactMounted) {
+      window.mountReact(); reactMounted = true;
+    } else {
+      document.getElementById('app').innerHTML = '';
+      reactMounted = false;
+      setTimeout(function() { window.mountReact(); reactMounted = true; }, 50);
+    }
   } catch (err) {
     console.error('launchDailyChallenge error:', err);
     alert('Error launching challenge: ' + err.message);
@@ -6088,19 +6127,22 @@ async function loadDailyChallenge(uid) {
 }
 
 function startDailyChallenge() {
-  // Launch quiz with daily challenge config (20 questions from dashboard)
-  window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 20 };
-  document.getElementById('dashPanel').classList.remove('active');
-  document.getElementById('homePanel').classList.add('hidden');
-  document.getElementById('examPanel').classList.add('active');
-  document.body.style.overflow = 'hidden';
+  // Check mountReact FIRST – before switching panels – to avoid blank white flash
   if (typeof window.mountReact !== 'function') {
     alert('Still loading, please wait a moment and try again.');
-    document.getElementById('examPanel').classList.remove('active');
-    document.getElementById('dashPanel').classList.add('active');
-    document.body.style.overflow = '';
     return;
   }
+  // Launch quiz with daily challenge config (20 questions from dashboard card)
+  window.EXAM_CONFIG = { chapter: 'all', shuffle: true, dailyChallenge: true, dailyLimit: 20 };
+  var lp = document.getElementById('landingPage');
+  var dp = document.getElementById('dashPanel');
+  var hp = document.getElementById('homePanel');
+  var ep = document.getElementById('examPanel');
+  if (lp) { lp.classList.remove('visible'); lp.style.display = 'none'; }
+  if (dp) dp.classList.remove('active');
+  if (hp) hp.classList.add('hidden');
+  if (ep) ep.classList.add('active');
+  document.body.style.overflow = 'hidden';
   if (!reactMounted) {
     window.mountReact();
     reactMounted = true;
@@ -6678,6 +6720,28 @@ window.openOnboarding = openOnboarding;
 window.drillBookmarks = drillBookmarks;
 window.removeBookmark = removeBookmark;
 window.startDailyChallenge = startDailyChallenge;
+
+// ── Mode card: chapter lock for free/trial users ──
+function initModeCards() {
+  var plan = (typeof getUserPlan === 'function') ? getUserPlan() : 'trial';
+  var isFree = (plan === 'trial' || plan === 'expired');
+  var overlay = document.getElementById('mcLockOverlay');
+  var card    = document.getElementById('modeCardChapter');
+  if (overlay) overlay.style.display = isFree ? 'flex' : 'none';
+  if (card)    card.style.cursor      = isFree ? 'default' : 'pointer';
+}
+window.initModeCards = initModeCards;
+
+function tryPracticeChapter() {
+  var plan = (typeof getUserPlan === 'function') ? getUserPlan() : 'trial';
+  if (plan === 'trial' || plan === 'expired') {
+    // Already showing lock overlay - do nothing (card click blocked)
+    return;
+  }
+  showPracticeConfig();
+}
+window.tryPracticeChapter = tryPracticeChapter;
+
 window.startSpacedReview = startSpacedReview;
 window.saveBlogSubscriber = saveBlogSubscriber;
 window.setCurrency = setCurrency;
@@ -6735,6 +6799,8 @@ window._showHome = function() {
   document.getElementById('dashPanel').classList.remove('active');
   document.getElementById('homePanel').classList.remove('hidden');
   window._updateHomeSavedSessionCard();
+  // Update mode card locks based on current plan
+  if (typeof initModeCards === 'function') initModeCards();
 };
 
 // ── Auth actions ──
