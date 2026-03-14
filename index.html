@@ -798,7 +798,9 @@ footer{
 @media(max-width:640px){.home-saved-session{flex-direction:column;align-items:flex-start}.btn-hss-resume{width:100%}}
 
 /* ── HOME SIGN-OUT BUTTON ── */
-.btn-home-signout{background:transparent;border:1px solid rgba(201,168,76,.5);color:var(--gold);padding:7px 18px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;letter-spacing:.03em;transition:all .2s}
+.btn-home-dashboard{background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.65);padding:7px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;letter-spacing:.03em;transition:all .2s}
+.btn-home-dashboard:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.4);color:#fff}
+.btn-home-signout{background:transparent;border:1px solid rgba(201,168,76,.5);color:var(--gold);padding:7px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;letter-spacing:.03em;transition:all .2s}
 .btn-home-signout:hover{background:rgba(201,168,76,.12);border-color:var(--gold)}
 .mode-card{background:var(--white);border:2px solid var(--border);border-radius:20px;padding:32px 28px;cursor:pointer;transition:all .25s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow-sm);position:relative;overflow:hidden;text-decoration:none;display:block}
 .mode-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s}
@@ -2670,6 +2672,7 @@ footer{
     </div>
   </div>
   <nav class="home-tabs" id="homeTabs">
+    <button class="btn-home-dashboard" onclick="window.goToDashboard()">← Dashboard</button>
     <button class="btn-home-signout" onclick="window.doSignOut()">Sign Out</button>
   </nav>
 </header>
@@ -3667,6 +3670,20 @@ window.goToHome = function() {
   window._updateHomeSavedSessionCard && window._updateHomeSavedSessionCard();
 };
 
+// Go to dashboard from any page (exam panel or home panel)
+window.goToDashboard = function() {
+  document.getElementById('examPanel').classList.remove('active');
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('dashPanel').classList.add('active');
+  document.body.style.overflow = '';
+  // Reset React so next session starts fresh
+  document.getElementById('app').innerHTML = '';
+  reactMounted = false;
+  // Hide return-to-results banner if present
+  var banner = document.getElementById('returnResultsBanner');
+  if (banner) banner.style.display = 'none';
+};
+
 
 // ── Daily Challenge ──────────────────────────────────────
 function launchDailyChallenge() {
@@ -4572,10 +4589,10 @@ const handleChapterSelection = (value) => {
                                 <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.6rem', fontWeight:700, color:'#0f1e3c', marginBottom:12 }}>No Questions Found</h2>
                                 <p style={{ fontSize:'.88rem', color:'#7a7a9a', lineHeight:1.6, marginBottom:28 }}>{loadError}</p>
                                 <button
-                                    onClick={() => window.goToHome && window.goToHome()}
+                                    onClick={() => window.goToDashboard && window.goToDashboard()}
                                     style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'13px 32px', background:'linear-gradient(135deg,#0f1e3c,#243a6b)', color:'#e8c97a', border:'none', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.9rem', fontWeight:700, cursor:'pointer', boxShadow:'0 4px 16px rgba(15,30,60,.2)' }}
                                 >
-                                    ← Back to Home Page
+                                    ← Back to Dashboard
                                 </button>
                             </div>
                         </div>
@@ -4733,10 +4750,10 @@ if (examStarted && questions.length === 0) {
                 )}
                 {loadError && (
                     <button
-                        onClick={() => { setExamStarted(false); setIsLoadingQuestions(false); }}
+                        onClick={() => window.goToDashboard && window.goToDashboard()}
                         style={{ background:'linear-gradient(135deg,#c9a84c,#a07c30)', border:'none', color:'#0f1e3c', padding:'11px 32px', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.88rem', fontWeight:700, cursor:'pointer', letterSpacing:'.02em' }}
                     >
-                        ← Back to Home
+                        ← Back to Dashboard
                     </button>
                 )}
             </div>
@@ -4789,12 +4806,20 @@ if (examStarted && questions.length === 0) {
                             </div>
                             <div style={{ display:'flex', alignItems:'center', gap:8, position:'relative' }}>
                             <button
-                                onClick={() => window.goToHome && window.goToHome()}
+                                onClick={() => window.goToDashboard && window.goToDashboard()}
                                 style={{ background:'rgba(201,168,76,.15)', border:'1px solid rgba(201,168,76,.3)', color:'#e8c97a', padding:'8px 20px', borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:'.8rem', fontWeight:600, cursor:'pointer', letterSpacing:'.03em', transition:'all .2s' }}
                                 onMouseOver={e => e.currentTarget.style.background='rgba(201,168,76,.28)'}
                                 onMouseOut={e => e.currentTarget.style.background='rgba(201,168,76,.15)'}
                             >
-                                ← Home
+                                ← Dashboard
+                            </button>
+                            <button
+                                onClick={() => window.doSignOut && window.doSignOut()}
+                                style={{ background:'transparent', border:'1px solid rgba(255,255,255,.18)', color:'rgba(255,255,255,.5)', padding:'8px 16px', borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:'.78rem', fontWeight:600, cursor:'pointer', letterSpacing:'.03em', transition:'all .2s' }}
+                                onMouseOver={e => { e.currentTarget.style.borderColor='rgba(201,168,76,.5)'; e.currentTarget.style.color='#c9a84c'; }}
+                                onMouseOut={e => { e.currentTarget.style.borderColor='rgba(255,255,255,.18)'; e.currentTarget.style.color='rgba(255,255,255,.5)'; }}
+                            >
+                                Sign Out
                             </button>
                             {window.EXAM_CONFIG && (window.EXAM_CONFIG.dailyChallenge || window.EXAM_CONFIG.masteryMode) && (
                               <button
@@ -4987,15 +5012,23 @@ if (examStarted && questions.length === 0) {
                                 </div>
                             </div>
 
-                            {/* ── Back to home ── */}
-                            <div style={{ textAlign:'center', paddingTop:12 }}>
+                            {/* ── Back to dashboard ── */}
+                            <div style={{ textAlign:'center', paddingTop:12, display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap' }}>
                                 <button
-                                    onClick={() => window.goToHome && window.goToHome()}
+                                    onClick={() => window.goToDashboard && window.goToDashboard()}
                                     style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:10, padding:'15px 40px', background:'linear-gradient(135deg,#0f1e3c,#243a6b)', color:'#e8c97a', border:'none', borderRadius:12, fontFamily:"'DM Sans',sans-serif", fontSize:'.95rem', fontWeight:700, letterSpacing:'.02em', cursor:'pointer', boxShadow:'0 4px 20px rgba(15,30,60,.25)', transition:'all .2s' }}
                                     onMouseOver={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 28px rgba(15,30,60,.32)'; }}
                                     onMouseOut={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(15,30,60,.25)'; }}
                                 >
-                                    ← Back to Home Page
+                                    ← Back to Dashboard
+                                </button>
+                                <button
+                                    onClick={() => window.doSignOut && window.doSignOut()}
+                                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:8, padding:'15px 28px', background:'transparent', color:'rgba(100,100,120,.7)', border:'1px solid rgba(200,200,210,.5)', borderRadius:12, fontFamily:"'DM Sans',sans-serif", fontSize:'.88rem', fontWeight:600, cursor:'pointer', transition:'all .2s' }}
+                                    onMouseOver={e => { e.currentTarget.style.borderColor='#c9a84c'; e.currentTarget.style.color='#a07c30'; }}
+                                    onMouseOut={e => { e.currentTarget.style.borderColor='rgba(200,200,210,.5)'; e.currentTarget.style.color='rgba(100,100,120,.7)'; }}
+                                >
+                                    Sign Out
                                 </button>
                             </div>
                         </div>
@@ -5055,6 +5088,22 @@ if (examStarted && questions.length === 0) {
 
                             {/* Controls */}
                             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                {/* Dashboard link */}
+                                <button
+                                    onClick={() => window.goToDashboard && window.goToDashboard()}
+                                    style={{ padding:'7px 14px', borderRadius:8, border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.55)', fontFamily:"'DM Sans',sans-serif", fontSize:'.74rem', fontWeight:600, cursor:'pointer', letterSpacing:'.03em' }}
+                                    title="Back to Dashboard"
+                                >
+                                    🏠 Dashboard
+                                </button>
+                                {/* Sign Out */}
+                                <button
+                                    onClick={() => window.doSignOut && window.doSignOut()}
+                                    style={{ padding:'7px 14px', borderRadius:8, border:'1px solid rgba(201,168,76,.3)', background:'transparent', color:'rgba(201,168,76,.7)', fontFamily:"'DM Sans',sans-serif", fontSize:'.74rem', fontWeight:600, cursor:'pointer', letterSpacing:'.03em' }}
+                                    title="Sign out"
+                                >
+                                    Sign Out
+                                </button>
                                 {/* Mark for review toggle */}
                                 <button
                                     onClick={toggleRevisit}
