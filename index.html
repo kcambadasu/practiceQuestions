@@ -5043,20 +5043,45 @@ if (examStarted && questions.length === 0) {
             }
 
             // Exam Screen — navy/gold theme
-            // BUG-001 & BUG-003: Guard against undefined currentQuestion
-            if (!currentQuestion) {
+            // ROOT-CAUSE FIX: Guard against undefined/malformed currentQuestion.
+            // A question with missing .options or .correctAnswer causes a TypeError during
+            // render (options.map / correctAnswer.charCodeAt), which unmounts the React tree
+            // → blank screen. The guard now catches both undefined question AND missing options.
+            if (!currentQuestion || !Array.isArray(currentQuestion.options)) {
+                // A question is missing its options array (malformed data in questions.js).
+                // Show a recovery screen: the user can skip the bad question or end the session.
+                const canSkip = currentQuestionIndex < totalQuestions - 1;
                 return (
                     <div style={{ minHeight:'100vh', background:'#faf8f3', fontFamily:"'DM Sans',sans-serif", display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
                         <div style={{ maxWidth:480, width:'100%', background:'#fff', border:'1px solid #ddd8cc', borderRadius:20, padding:'48px 40px', boxShadow:'0 6px 28px rgba(15,30,60,.12)', textAlign:'center' }}>
                             <div style={{ width:56, height:56, background:'#fdecea', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:'1.5rem' }}>⚠️</div>
-                            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.6rem', fontWeight:700, color:'#0f1e3c', marginBottom:12 }}>No Question Available</h2>
-                            <p style={{ fontSize:'.88rem', color:'#7a7a9a', lineHeight:1.6, marginBottom:28 }}>This question could not be loaded. Please try refreshing the page or starting a new session.</p>
-                            <button
-                                onClick={() => window.goToDashboard && window.goToDashboard()}
-                                style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'13px 32px', background:'linear-gradient(135deg,#0f1e3c,#243a6b)', color:'#e8c97a', border:'none', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.9rem', fontWeight:700, cursor:'pointer', boxShadow:'0 4px 16px rgba(15,30,60,.2)' }}
-                            >
-                                ← Back to Dashboard
-                            </button>
+                            <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.6rem', fontWeight:700, color:'#0f1e3c', marginBottom:12 }}>Question Unavailable</h2>
+                            <p style={{ fontSize:'.88rem', color:'#7a7a9a', lineHeight:1.6, marginBottom:28 }}>
+                                Question {currentQuestionIndex + 1} of {totalQuestions} has incomplete data and cannot be displayed.
+                                {canSkip ? ' You can skip it and continue, or end the session now.' : ' This was the last question — view your results.'}
+                            </p>
+                            <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+                                {canSkip && (
+                                    <button
+                                        onClick={() => { setCurrentQuestionIndex(currentQuestionIndex + 1); setAnswerSubmitted(false); setIsCorrect(null); setSelectedAnswer(''); }}
+                                        style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'13px 28px', background:'linear-gradient(135deg,#0f1e3c,#243a6b)', color:'#e8c97a', border:'none', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.9rem', fontWeight:700, cursor:'pointer', boxShadow:'0 4px 16px rgba(15,30,60,.2)' }}
+                                    >
+                                        Skip Question →
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowResults(true)}
+                                    style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'13px 28px', background:'transparent', color:'#0f1e3c', border:'1px solid #c9a84c', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.9rem', fontWeight:700, cursor:'pointer' }}
+                                >
+                                    View Results
+                                </button>
+                                <button
+                                    onClick={() => window.goToDashboard && window.goToDashboard()}
+                                    style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'13px 28px', background:'transparent', color:'#7a7a9a', border:'1px solid #ddd8cc', borderRadius:10, fontFamily:"'DM Sans',sans-serif", fontSize:'.88rem', fontWeight:600, cursor:'pointer' }}
+                                >
+                                    ← Dashboard
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -5240,7 +5265,7 @@ if (examStarted && questions.length === 0) {
 
                                 {/* Options */}
                                 <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
-                                    {currentQuestion.options.map((option, idx) => {
+                                    {(currentQuestion.options || []).map((option, idx) => {
                                         const letter = String.fromCharCode(65 + idx);
                                         const isSelected   = selectedAnswer === letter;
                                         const isEliminated = eliminatedOptions[`${currentQuestion.id}-${letter}`];
@@ -5318,7 +5343,7 @@ if (examStarted && questions.length === 0) {
                                             {isCorrect
                                                 ? <span style={{ fontWeight:600, color:'#16a34a', fontSize:'.9rem' }}>Correct!</span>
                                                 : <span style={{ fontSize:'.9rem', color:'#dc2626' }}>
-                                                    <strong>Incorrect.</strong> The correct answer is <strong>{currentQuestion.correctAnswer}</strong>: {currentQuestion.options[currentQuestion.correctAnswer.charCodeAt(0) - 65]}
+                                                    <strong>Incorrect.</strong> The correct answer is <strong>{currentQuestion.correctAnswer || '—'}</strong>{currentQuestion.correctAnswer && (currentQuestion.options || [])[currentQuestion.correctAnswer.charCodeAt(0) - 65] ? ': ' + (currentQuestion.options)[currentQuestion.correctAnswer.charCodeAt(0) - 65] : ''}
                                                   </span>
                                             }
                                         </div>
