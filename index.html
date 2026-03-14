@@ -3682,6 +3682,14 @@ window.goToDashboard = function() {
   // Hide return-to-results banner if present
   var banner = document.getElementById('returnResultsBanner');
   if (banner) banner.style.display = 'none';
+  // Immediately reflect latest in-memory progress (updated by _saveSession)
+  if (window._refreshDashStats) window._refreshDashStats();
+  // Also re-read from Firestore to get authoritative values (handles race conditions)
+  if (window._currentUser && typeof loadDashboardStats === 'function') {
+    loadDashboardStats(window._currentUser.uid).then(function() {
+      if (typeof animateCountUps === 'function') setTimeout(animateCountUps, 100);
+    }).catch(function(e) { console.warn('[K2] goToDashboard stats reload error:', e); });
+  }
 };
 
 
@@ -7368,10 +7376,11 @@ window._saveSession = async function(sessionData) {
       sessionsCompleted: newSessions,
       bestScore:         newBestScore
     };
-    await fns.updateDoc(ref, update);
+    await fns.setDoc(ref, update, { merge: true });
     window._userProgress = { ...prog, ...update };
     window._refreshDashStats();
-  } catch(e) { console.warn('Progress save error:', e); }
+    console.log('[K2] Session saved OK — totalAttempted:', update.totalAttempted, 'sessionsCompleted:', update.sessionsCompleted);
+  } catch(e) { console.error('[K2] Progress save error (CRITICAL):', e); }
 };
 
 // ── Activity: save individual session to activities subcollection ──
