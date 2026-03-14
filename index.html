@@ -5047,8 +5047,8 @@ if (examStarted && questions.length === 0) {
             // A question with missing .options or .correctAnswer causes a TypeError during
             // render (options.map / correctAnswer.charCodeAt), which unmounts the React tree
             // → blank screen. The guard now catches both undefined question AND missing options.
-            if (!currentQuestion || !Array.isArray(currentQuestion.options)) {
-                // A question is missing its options array (malformed data in questions.js).
+            if (!currentQuestion || !currentQuestion.options || typeof currentQuestion.options !== 'object') {
+                // A question is missing/null options (malformed data in questions.js).
                 // Show a recovery screen: the user can skip the bad question or end the session.
                 const canSkip = currentQuestionIndex < totalQuestions - 1;
                 return (
@@ -5086,6 +5086,14 @@ if (examStarted && questions.length === 0) {
                     </div>
                 );
             }
+
+            // Normalize options to [[letter, text], ...] pairs.
+            // questions.js uses TWO formats:
+            //   Array:  options: ["text A", "text B", "text C"]          → letters A, B, C derived by index
+            //   Object: options: {A: "text A", B: "text B", C: "text C"} → letters taken from keys
+            const optionEntries = Array.isArray(currentQuestion.options)
+                ? currentQuestion.options.map((text, idx) => [String.fromCharCode(65 + idx), text])
+                : Object.entries(currentQuestion.options);
 
             const diffBadge = {
                 Easy:     { bg:'#e8f7ef', color:'#1a5c3a' },
@@ -5265,8 +5273,7 @@ if (examStarted && questions.length === 0) {
 
                                 {/* Options */}
                                 <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
-                                    {(currentQuestion.options || []).map((option, idx) => {
-                                        const letter = String.fromCharCode(65 + idx);
+                                    {optionEntries.map(([letter, option]) => {
                                         const isSelected   = selectedAnswer === letter;
                                         const isEliminated = eliminatedOptions[`${currentQuestion.id}-${letter}`];
                                         const isCorrectOpt = letter === currentQuestion.correctAnswer;
@@ -5287,7 +5294,7 @@ if (examStarted && questions.length === 0) {
                                         }
                                         return (
                                             <div
-                                                key={idx}
+                                                key={letter}
                                                 onClick={() => !isEliminated && !answerSubmitted && handleAnswerSelect(letter)}
                                                 style={{
                                                     display:'flex', alignItems:'center', gap:14,
@@ -5343,7 +5350,7 @@ if (examStarted && questions.length === 0) {
                                             {isCorrect
                                                 ? <span style={{ fontWeight:600, color:'#16a34a', fontSize:'.9rem' }}>Correct!</span>
                                                 : <span style={{ fontSize:'.9rem', color:'#dc2626' }}>
-                                                    <strong>Incorrect.</strong> The correct answer is <strong>{currentQuestion.correctAnswer || '—'}</strong>{currentQuestion.correctAnswer && (currentQuestion.options || [])[currentQuestion.correctAnswer.charCodeAt(0) - 65] ? ': ' + (currentQuestion.options)[currentQuestion.correctAnswer.charCodeAt(0) - 65] : ''}
+                                                    <strong>Incorrect.</strong> The correct answer is <strong>{currentQuestion.correctAnswer || '—'}</strong>{currentQuestion.correctAnswer ? ': ' + (Array.isArray(currentQuestion.options) ? (currentQuestion.options[currentQuestion.correctAnswer.charCodeAt(0) - 65] || '') : ((currentQuestion.options || {})[currentQuestion.correctAnswer] || '')) : ''}
                                                   </span>
                                             }
                                         </div>
