@@ -735,6 +735,399 @@ footer{
   overflow-y:auto; background:#f3f4f6; font-family:'DM Sans',sans-serif;
 }
 #weakAreasPanel.active{display:block}
+
+/* ── CHAPTER SUMMARIES PANEL ── */
+#chapterSummariesPanel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--navy, #0A1628);
+  overflow-y: auto;
+  z-index: 999;
+}
+#chapterSummariesPanel.active { display: flex; flex-direction: column; }
+
+.cs-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(10,22,40,0.95);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.cs-panel-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cs-panel-logo-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+}
+.cs-panel-logo-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+.cs-back-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.65);
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cs-back-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* Search bar */
+.cs-search-bar {
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+}
+.cs-search-input {
+  width: 100%;
+  max-width: 480px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.cs-search-input::placeholder { color: rgba(255,255,255,0.3); }
+.cs-search-input:focus { border-color: var(--gold, #C9A84C); }
+
+/* Three-panel body */
+.cs-body {
+  display: grid;
+  grid-template-columns: 160px 260px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Subject panel */
+.cs-subjects {
+  border-right: 1px solid rgba(255,255,255,0.06);
+  overflow-y: auto;
+  padding: 10px 0;
+}
+.cs-subject-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  gap: 6px;
+  line-height: 1.3;
+}
+.cs-subject-item:hover { color: #fff; background: rgba(255,255,255,0.04); }
+.cs-subject-item.cs-active {
+  color: var(--gold, #C9A84C);
+  border-left-color: var(--gold, #C9A84C);
+  background: rgba(201,168,76,0.07);
+}
+.cs-subject-count {
+  font-size: 0.65rem;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.35);
+  border-radius: 8px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+.cs-subject-item.cs-active .cs-subject-count {
+  background: rgba(201,168,76,0.18);
+  color: var(--gold, #C9A84C);
+}
+
+/* Chapter list panel */
+.cs-chapters {
+  border-right: 1px solid rgba(255,255,255,0.06);
+  overflow-y: auto;
+  background: rgba(255,255,255,0.015);
+}
+.cs-chapters-heading {
+  padding: 12px 16px 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.3);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  position: sticky;
+  top: 0;
+  background: var(--navy, #0A1628);
+  z-index: 1;
+}
+.cs-chapter-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+.cs-chapter-item:hover { background: rgba(255,255,255,0.04); }
+.cs-chapter-item.cs-active {
+  border-left-color: var(--gold, #C9A84C);
+  background: rgba(201,168,76,0.07);
+}
+.cs-chapter-code {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold, #C9A84C);
+  margin-bottom: 3px;
+}
+.cs-chapter-name {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.35;
+}
+.cs-chapter-item.cs-active .cs-chapter-name { color: #fff; font-weight: 600; }
+
+/* Detail panel */
+.cs-detail {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255,255,255,0.01);
+}
+.cs-detail-header {
+  padding: 20px 28px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.cs-detail-code {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold, #C9A84C);
+  background: rgba(201,168,76,0.12);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-bottom: 8px;
+}
+.cs-detail-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px;
+}
+.cs-detail-subject {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+}
+
+/* Tabs */
+.cs-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0 28px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.cs-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+.cs-tab-btn:hover { color: rgba(255,255,255,0.75); }
+.cs-tab-btn.cs-active {
+  color: #fff;
+  border-bottom-color: var(--gold, #C9A84C);
+  font-weight: 600;
+}
+.cs-tab-count {
+  font-size: 0.65rem;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.35);
+  border-radius: 8px;
+  padding: 1px 6px;
+}
+.cs-tab-btn.cs-active .cs-tab-count {
+  background: rgba(201,168,76,0.18);
+  color: var(--gold, #C9A84C);
+}
+
+/* Tab content */
+.cs-tab-content { padding: 20px 28px 32px; flex: 1; }
+
+/* Key Areas */
+.cs-key-areas { display: flex; flex-direction: column; gap: 14px; }
+.cs-area-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left: 4px solid var(--gold, #C9A84C);
+  border-radius: 8px;
+  padding: 14px 18px;
+}
+.cs-area-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.cs-area-summary {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.65;
+  margin: 0 0 10px;
+}
+.cs-formulae { display: flex; flex-direction: column; gap: 5px; }
+.cs-formula {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  padding: 5px 10px;
+  color: rgba(255,255,255,0.8);
+}
+
+/* Generic lists */
+.cs-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 9px; }
+.cs-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.75);
+}
+.cs-list-tips .cs-list-item    { border-left: 4px solid #2a9d8f; }
+.cs-list-errors .cs-list-item  { border-left: 4px solid #e76f51; }
+.cs-list-links .cs-list-item   { border-left: 4px solid rgba(201,168,76,0.6); }
+.cs-list-icon { flex-shrink: 0; font-size: 1rem; margin-top: 1px; }
+
+/* Must Memorize grid */
+.cs-memorize-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.cs-memorize-card {
+  background: rgba(201,168,76,0.07);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cs-memorize-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--gold, #C9A84C);
+  opacity: 0.6;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-family: 'Courier New', monospace;
+}
+.cs-memorize-text {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+  font-family: 'Courier New', monospace;
+}
+
+/* Search results */
+.cs-search-results { padding: 16px 28px; display: flex; flex-direction: column; gap: 10px; }
+.cs-result-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cs-result-card:hover { border-color: var(--gold, #C9A84C); background: rgba(201,168,76,0.06); }
+.cs-result-code {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--gold, #C9A84C);
+  background: rgba(201,168,76,0.12);
+  border-radius: 4px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+.cs-result-name { font-weight: 600; font-size: 0.85rem; color: #fff; }
+.cs-result-subj { font-size: 0.72rem; color: rgba(255,255,255,0.35); margin-top: 2px; }
+
+/* Empty state */
+.cs-empty {
+  padding: 48px 28px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.25);
+}
+
+/* Scrollbar */
+.cs-subjects::-webkit-scrollbar,
+.cs-chapters::-webkit-scrollbar,
+.cs-detail::-webkit-scrollbar { width: 3px; }
+.cs-subjects::-webkit-scrollbar-thumb,
+.cs-chapters::-webkit-scrollbar-thumb,
+.cs-detail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .cs-body { grid-template-columns: 140px 1fr; }
+  .cs-detail { display: none; }
+  .cs-body.cs-detail-open .cs-detail { display: flex; }
+  .cs-body.cs-detail-open .cs-subjects,
+  .cs-body.cs-detail-open .cs-chapters { display: none; }
+}
+@media (max-width: 600px) {
+  .cs-body { grid-template-columns: 1fr; }
+  .cs-subjects { display: none; }
+}
 .wa-header{background:var(--navy);padding:20px 40px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
 .wa-header::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 79px,rgba(201,168,76,.04) 79px,rgba(201,168,76,.04) 80px),repeating-linear-gradient(0deg,transparent,transparent 79px,rgba(201,168,76,.04) 79px,rgba(201,168,76,.04) 80px);}
 .wa-header-left{position:relative;display:flex;align-items:center;gap:14px}
@@ -2608,11 +3001,11 @@ footer{
       </div>
     </div>
 
-    <!-- Chapter Summaries (Coming Soon) -->
+    <!-- Chapter Summaries -->
     <div class="new-dash-card" style="margin-bottom:24px">
-      <div class="new-dash-card-title">Chapter Summaries <span style="background:rgba(201,168,76,0.2);color:#C9A84C;font-size:0.65rem;padding:1px 8px;border-radius:4px;margin-left:6px;font-weight:700">SOON</span></div>
-      <p style="color:rgba(255,255,255,0.4);font-size:0.88rem">Detailed formula sheets and concept summaries for every chapter.</p>
-      <button style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);padding:8px 20px;border-radius:6px;font-family:'Lato',sans-serif;font-size:0.85rem;cursor:pointer;margin-top:12px" onclick="showComingSoon('Chapter Summaries')">View Chapter Summaries</button>
+      <div class="new-dash-card-title">Chapter Summaries</div>
+      <p style="color:rgba(255,255,255,0.55);font-size:0.88rem">Detailed exam-focused summaries, formula sheets, tips and common errors for every CFA Level I chapter.</p>
+      <button style="background:var(--gold,#C9A84C);border:none;color:#0A1628;padding:9px 22px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;margin-top:14px;transition:opacity .15s" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" onclick="showChapterSummaries()">Open Chapter Summaries →</button>
     </div>
 
     <!-- Mock Exam (Coming Soon) -->
@@ -2896,6 +3289,7 @@ footer{
 
 <!-- Questions data (loaded from questions.js) -->
 <script src="questions.js"></script>
+<script src="chapter_summaries.js"></script>
 <script>
 // ── questions.js compatibility shim ──────────────────────────────────────────
 // Cowork appends batches directly, so the file may start with:
@@ -7702,6 +8096,367 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   document.getElementById('examPanel').classList.remove('active');
 });
+
+// ── CHAPTER SUMMARIES PANEL ─────────────────────────────────────────────────
+
+var CS_STATE = {
+  activeSubject: null,
+  activeChapter: null,
+  activeTab: 'keyAreas'
+};
+
+var CS_SUBJECT_ORDER = [
+  "Ethical and Professional Standards",
+  "Quantitative Methods",
+  "Economics",
+  "Financial Statement Analysis",
+  "Corporate Finance",
+  "Equity Investments",
+  "Fixed Income",
+  "Derivatives",
+  "Alternative Investments",
+  "Portfolio Management"
+];
+
+var CS_SUBJECT_SHORT = {
+  "Ethical and Professional Standards": "Ethics",
+  "Quantitative Methods":               "Quant",
+  "Economics":                          "Economics",
+  "Financial Statement Analysis":       "FSA",
+  "Corporate Finance":                  "Corp Finance",
+  "Equity Investments":                 "Equity",
+  "Fixed Income":                       "Fixed Income",
+  "Derivatives":                        "Derivatives",
+  "Alternative Investments":            "Alternatives",
+  "Portfolio Management":               "Portfolio Mgmt"
+};
+
+var CS_TABS = [
+  { key: 'keyAreas',     label: 'Key Areas'      },
+  { key: 'examTips',     label: 'Exam Tips'       },
+  { key: 'commonErrors', label: 'Common Errors'   },
+  { key: 'mustMemorize', label: 'Must Memorize'   },
+  { key: 'conceptLinks', label: 'Concept Links'   }
+];
+
+function showChapterSummaries() {
+  // Hide all other panels
+  var hp = document.getElementById('homePanel');
+  var ep = document.getElementById('examPanel');
+  var dp = document.getElementById('dashPanel');
+  var wp = document.getElementById('weakAreasPanel');
+  if (hp) hp.classList.add('hidden');
+  if (ep) ep.classList.remove('active');
+  if (dp) dp.classList.remove('active');
+  if (wp) wp.classList.remove('active');
+
+  // Show summary panel
+  var sp = document.getElementById('chapterSummariesPanel');
+  sp.classList.add('active');
+  sp.scrollTop = 0;
+
+  // Reset search
+  var searchEl = document.getElementById('csSummarySearch');
+  if (searchEl) searchEl.value = '';
+  document.getElementById('csSearchResults').style.display = 'none';
+  document.getElementById('csBodyPanel').style.display = 'grid';
+
+  // Render
+  csRenderSubjects();
+}
+
+function closeChapterSummaries() {
+  var sp = document.getElementById('chapterSummariesPanel');
+  sp.classList.remove('active');
+  // Go back to dashboard
+  if (window.auth && window.auth.currentUser) {
+    window._showDashboard(window.auth.currentUser);
+  } else {
+    var dp = document.getElementById('dashPanel');
+    if (dp) dp.classList.add('active');
+  }
+}
+
+function csBySubject() {
+  var all = window.CHAPTER_SUMMARIES || [];
+  var grouped = {};
+  CS_SUBJECT_ORDER.forEach(function(s) { grouped[s] = []; });
+  all.forEach(function(ch) {
+    if (grouped[ch.subject]) grouped[ch.subject].push(ch);
+    else grouped[ch.subject] = [ch];
+  });
+  return grouped;
+}
+
+function csRenderSubjects() {
+  var grouped = csBySubject();
+  var container = document.getElementById('csSubjects');
+  container.innerHTML = '';
+
+  // Auto-select first subject with chapters
+  if (!CS_STATE.activeSubject) {
+    for (var i = 0; i < CS_SUBJECT_ORDER.length; i++) {
+      if (grouped[CS_SUBJECT_ORDER[i]] && grouped[CS_SUBJECT_ORDER[i]].length > 0) {
+        CS_STATE.activeSubject = CS_SUBJECT_ORDER[i];
+        break;
+      }
+    }
+  }
+
+  CS_SUBJECT_ORDER.forEach(function(subj) {
+    var count = (grouped[subj] || []).length;
+    var div = document.createElement('div');
+    div.className = 'cs-subject-item' + (CS_STATE.activeSubject === subj ? ' cs-active' : '');
+    div.innerHTML =
+      '<span style="flex:1">' + (CS_SUBJECT_SHORT[subj] || subj) + '</span>' +
+      '<span class="cs-subject-count">' + count + '</span>';
+    div.onclick = function() {
+      CS_STATE.activeSubject = subj;
+      CS_STATE.activeChapter = null;
+      CS_STATE.activeTab = 'keyAreas';
+      csRenderSubjects();
+      csRenderChapters();
+      csRenderDetail();
+    };
+    container.appendChild(div);
+  });
+
+  csRenderChapters();
+}
+
+function csRenderChapters() {
+  var grouped = csBySubject();
+  var chapters = grouped[CS_STATE.activeSubject] || [];
+  var container = document.getElementById('csChapters');
+  container.innerHTML = '';
+
+  var heading = document.createElement('div');
+  heading.className = 'cs-chapters-heading';
+  heading.textContent = CS_STATE.activeSubject || 'Chapters';
+  container.appendChild(heading);
+
+  if (chapters.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'cs-empty';
+    empty.textContent = 'No summaries loaded for this subject.';
+    container.appendChild(empty);
+    return;
+  }
+
+  // Auto-select first chapter
+  if (!CS_STATE.activeChapter || !chapters.find(function(c) { return c.chapterCode === CS_STATE.activeChapter; })) {
+    CS_STATE.activeChapter = chapters[0].chapterCode;
+  }
+
+  chapters.forEach(function(ch) {
+    var div = document.createElement('div');
+    div.className = 'cs-chapter-item' + (CS_STATE.activeChapter === ch.chapterCode ? ' cs-active' : '');
+    div.innerHTML =
+      '<span class="cs-chapter-code">' + ch.chapterCode + '</span>' +
+      '<span class="cs-chapter-name">' + ch.chapterName + '</span>';
+    div.onclick = function() {
+      CS_STATE.activeChapter = ch.chapterCode;
+      CS_STATE.activeTab = 'keyAreas';
+      csRenderChapters();
+      csRenderDetail();
+    };
+    container.appendChild(div);
+  });
+
+  csRenderDetail();
+}
+
+function csRenderDetail() {
+  var all = window.CHAPTER_SUMMARIES || [];
+  var ch = all.find(function(c) { return c.chapterCode === CS_STATE.activeChapter; });
+  var container = document.getElementById('csDetail');
+  container.innerHTML = '';
+
+  if (!ch) {
+    container.innerHTML = '<div class="cs-empty">Select a chapter to view its summary.</div>';
+    return;
+  }
+
+  // Header
+  var header = document.createElement('div');
+  header.className = 'cs-detail-header';
+  header.innerHTML =
+    '<span class="cs-detail-code">' + ch.chapterCode + '</span>' +
+    '<h3 class="cs-detail-title">' + ch.chapterName + '</h3>' +
+    '<span class="cs-detail-subject">' + ch.subject + '</span>';
+  container.appendChild(header);
+
+  // Tabs
+  var tabs = document.createElement('div');
+  tabs.className = 'cs-tabs';
+  CS_TABS.forEach(function(tab) {
+    var count = (ch[tab.key] || []).length;
+    var btn = document.createElement('button');
+    btn.className = 'cs-tab-btn' + (CS_STATE.activeTab === tab.key ? ' cs-active' : '');
+    btn.innerHTML = tab.label + ' <span class="cs-tab-count">' + count + '</span>';
+    btn.onclick = function() {
+      CS_STATE.activeTab = tab.key;
+      csRenderDetail();
+    };
+    tabs.appendChild(btn);
+  });
+  container.appendChild(tabs);
+
+  // Content
+  var content = document.createElement('div');
+  content.className = 'cs-tab-content';
+
+  if (CS_STATE.activeTab === 'keyAreas') {
+    var areas = ch.keyAreas || [];
+    if (!areas.length) { content.innerHTML = '<div class="cs-empty">No key areas available.</div>'; }
+    else {
+      var wrap = document.createElement('div');
+      wrap.className = 'cs-key-areas';
+      areas.forEach(function(area) {
+        var card = document.createElement('div');
+        card.className = 'cs-area-card';
+        var formulaeHTML = '';
+        if (area.formulae && area.formulae.length) {
+          formulaeHTML = '<div class="cs-formulae">' +
+            area.formulae.map(function(f) { return '<div class="cs-formula">' + f + '</div>'; }).join('') +
+            '</div>';
+        }
+        card.innerHTML =
+          '<div class="cs-area-title">' + area.title + '</div>' +
+          '<p class="cs-area-summary">' + area.summary + '</p>' +
+          formulaeHTML;
+        wrap.appendChild(card);
+      });
+      content.appendChild(wrap);
+    }
+  }
+
+  else if (CS_STATE.activeTab === 'examTips') {
+    var tips = ch.examTips || [];
+    var ul = document.createElement('ul');
+    ul.className = 'cs-list cs-list-tips';
+    if (!tips.length) { content.innerHTML = '<div class="cs-empty">No exam tips available.</div>'; }
+    else {
+      tips.forEach(function(tip) {
+        var li = document.createElement('li');
+        li.className = 'cs-list-item';
+        li.innerHTML = '<span class="cs-list-icon">&#128161;</span><span>' + tip + '</span>';
+        ul.appendChild(li);
+      });
+      content.appendChild(ul);
+    }
+  }
+
+  else if (CS_STATE.activeTab === 'commonErrors') {
+    var errs = ch.commonErrors || [];
+    var ul = document.createElement('ul');
+    ul.className = 'cs-list cs-list-errors';
+    if (!errs.length) { content.innerHTML = '<div class="cs-empty">No common errors listed.</div>'; }
+    else {
+      errs.forEach(function(err) {
+        var li = document.createElement('li');
+        li.className = 'cs-list-item';
+        li.innerHTML = '<span class="cs-list-icon">&#9888;&#65039;</span><span>' + err + '</span>';
+        ul.appendChild(li);
+      });
+      content.appendChild(ul);
+    }
+  }
+
+  else if (CS_STATE.activeTab === 'mustMemorize') {
+    var items = ch.mustMemorize || [];
+    if (!items.length) { content.innerHTML = '<div class="cs-empty">No items listed.</div>'; }
+    else {
+      var grid = document.createElement('div');
+      grid.className = 'cs-memorize-grid';
+      items.forEach(function(item, i) {
+        var card = document.createElement('div');
+        card.className = 'cs-memorize-card';
+        var num = String(i + 1).padStart(2, '0');
+        card.innerHTML =
+          '<span class="cs-memorize-num">' + num + '</span>' +
+          '<span class="cs-memorize-text">' + item + '</span>';
+        grid.appendChild(card);
+      });
+      content.appendChild(grid);
+    }
+  }
+
+  else if (CS_STATE.activeTab === 'conceptLinks') {
+    var links = ch.conceptLinks || [];
+    var ul = document.createElement('ul');
+    ul.className = 'cs-list cs-list-links';
+    if (!links.length) { content.innerHTML = '<div class="cs-empty">No concept links available.</div>'; }
+    else {
+      links.forEach(function(link) {
+        var li = document.createElement('li');
+        li.className = 'cs-list-item';
+        li.innerHTML = '<span class="cs-list-icon">&#128279;</span><span>' + link + '</span>';
+        ul.appendChild(li);
+      });
+      content.appendChild(ul);
+    }
+  }
+
+  container.appendChild(content);
+}
+
+function csHandleSearch(query) {
+  var searchResultsEl = document.getElementById('csSearchResults');
+  var bodyPanel = document.getElementById('csBodyPanel');
+
+  if (!query.trim()) {
+    searchResultsEl.style.display = 'none';
+    bodyPanel.style.display = 'grid';
+    return;
+  }
+
+  bodyPanel.style.display = 'none';
+  searchResultsEl.style.display = 'flex';
+  searchResultsEl.style.flexDirection = 'column';
+
+  var all = window.CHAPTER_SUMMARIES || [];
+  var q = query.toLowerCase();
+  var results = all.filter(function(ch) {
+    return (
+      ch.chapterName.toLowerCase().includes(q) ||
+      ch.subject.toLowerCase().includes(q) ||
+      ch.chapterCode.toLowerCase().includes(q) ||
+      (ch.keyAreas || []).some(function(a) { return a.title.toLowerCase().includes(q); }) ||
+      (ch.mustMemorize || []).some(function(m) { return m.toLowerCase().includes(q); })
+    );
+  });
+
+  searchResultsEl.innerHTML = '';
+
+  if (!results.length) {
+    searchResultsEl.innerHTML = '<div class="cs-empty">No chapters match your search.</div>';
+    return;
+  }
+
+  results.forEach(function(ch) {
+    var card = document.createElement('div');
+    card.className = 'cs-result-card';
+    card.innerHTML =
+      '<span class="cs-result-code">' + ch.chapterCode + '</span>' +
+      '<div>' +
+        '<div class="cs-result-name">' + ch.chapterName + '</div>' +
+        '<div class="cs-result-subj">' + ch.subject + '</div>' +
+      '</div>';
+    card.onclick = function() {
+      document.getElementById('csSummarySearch').value = '';
+      searchResultsEl.style.display = 'none';
+      bodyPanel.style.display = 'grid';
+      CS_STATE.activeSubject = ch.subject;
+      CS_STATE.activeChapter = ch.chapterCode;
+      CS_STATE.activeTab = 'keyAreas';
+      csRenderSubjects();
+    };
+    searchResultsEl.appendChild(card);
+  });
+}
+
+// ── END CHAPTER SUMMARIES ────────────────────────────────────────────────────
 </script>
 
 
@@ -7742,6 +8497,45 @@ document.addEventListener('DOMContentLoaded', function() {
       </span>
     </div>
   </div>
+</div>
+
+<!-- ════════════════════════════════
+     CHAPTER SUMMARIES PANEL
+════════════════════════════════ -->
+<div id="chapterSummariesPanel">
+
+  <!-- Header -->
+  <div class="cs-panel-header">
+    <div class="cs-panel-logo">
+      <div>
+        <div class="cs-panel-logo-title">Chapter Summaries</div>
+        <div class="cs-panel-logo-sub">CFA Level I · Exam Prep</div>
+      </div>
+    </div>
+    <button class="cs-back-btn" onclick="closeChapterSummaries()">← Back to Dashboard</button>
+  </div>
+
+  <!-- Search -->
+  <div class="cs-search-bar">
+    <input
+      id="csSummarySearch"
+      class="cs-search-input"
+      type="text"
+      placeholder="Search chapters, topics, formulae…"
+      oninput="csHandleSearch(this.value)"
+    />
+  </div>
+
+  <!-- Search Results (hidden when search is empty) -->
+  <div id="csSearchResults" class="cs-search-results" style="display:none"></div>
+
+  <!-- Three-panel body -->
+  <div class="cs-body" id="csBodyPanel">
+    <div class="cs-subjects" id="csSubjects"></div>
+    <div class="cs-chapters" id="csChapters"></div>
+    <div class="cs-detail" id="csDetail"></div>
+  </div>
+
 </div>
 
 </body>
