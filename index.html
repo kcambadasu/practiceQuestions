@@ -3015,22 +3015,16 @@ footer{
       <button style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);padding:8px 20px;border-radius:6px;font-family:'Lato',sans-serif;font-size:0.85rem;cursor:pointer;margin-top:12px" onclick="showComingSoon('Mock Exam')">Start Mock Exam</button>
     </div>
 
-    <!-- Resources (Coming Soon) -->
-    <div class="new-dash-card" style="margin-bottom:24px">
-      <div class="new-dash-card-title">Resources <span style="background:rgba(201,168,76,0.2);color:#C9A84C;font-size:0.65rem;padding:1px 8px;border-radius:4px;margin-left:6px;font-weight:700">SOON</span></div>
-      <p style="color:rgba(255,255,255,0.4);font-size:0.88rem;margin-bottom:12px">Formula sheets, study guides, and exam tips.</p>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px;position:relative;overflow:hidden">
-          <div style="font-size:0.7rem;color:#C9A84C;font-weight:700;text-transform:uppercase;margin-bottom:4px">Study Strategy</div>
-          <div style="font-size:0.85rem;font-weight:700">CFA Level I Formula Sheet</div>
-          <div style="position:absolute;inset:0;background:rgba(10,22,40,0.7);display:flex;align-items:center;justify-content:center"><span style="background:#C9A84C;color:#0A1628;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:3px">COMING SOON</span></div>
-        </div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px;position:relative;overflow:hidden">
-          <div style="font-size:0.7rem;color:#C9A84C;font-weight:700;text-transform:uppercase;margin-bottom:4px">Exam Tips</div>
-          <div style="font-size:0.85rem;font-weight:700">10 Common Mistakes</div>
-          <div style="position:absolute;inset:0;background:rgba(10,22,40,0.7);display:flex;align-items:center;justify-content:center"><span style="background:#C9A84C;color:#0A1628;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:3px">COMING SOON</span></div>
-        </div>
-      </div>
+    <!-- Study Strategy (dynamic) -->
+    <div class="new-dash-card" style="margin-bottom:24px" id="studyStrategyCard">
+      <div class="new-dash-card-title">Study Strategy</div>
+      <div id="studyStrategyContent"></div>
+    </div>
+
+    <!-- Exam Tips (dynamic) -->
+    <div class="new-dash-card" style="margin-bottom:24px" id="examTipsCard">
+      <div class="new-dash-card-title">Exam Tips</div>
+      <div id="examTipsContent"></div>
     </div>
 
     <!-- Referral Card -->
@@ -6573,8 +6567,12 @@ async function populateDashboard(user) {
     '"Discipline in preparation translates to confidence in the exam hall."'
   ];
   if (quoteEl) quoteEl.textContent = quotes[Math.floor(Math.random() * quotes.length)];
-  // Exam countdown
+  // Exam countdown (also triggers study strategy + exam tips if date is set)
   populateCountdown();
+  // If no exam date, still render the generic strategy/tips cards
+  if (!(_userPlanData && _userPlanData.examDate)) {
+    populateStudyStrategyAndTips(null);
+  }
   // Load scores, streak, bookmarks etc
   await loadDashboardStats(uid);
   await loadRecentSessions(uid);
@@ -7209,6 +7207,7 @@ function populateCountdown() {
     <div class="countdown-days" data-count="${diffDays}">${diffDays}</div>
     <div class="countdown-bar"><div class="countdown-bar-fill" style="width:${progress}%"></div></div>
     <div class="countdown-motiv">${motiv}</div>`;
+  populateStudyStrategyAndTips(diffDays);
 }
 
 function openExamDatePicker() {
@@ -7221,6 +7220,196 @@ function openExamDatePicker() {
   updateDoc(doc(window._fbDb, 'users', uid), { examDate });
   if (_userPlanData) _userPlanData.examDate = examDate;
   populateCountdown();
+}
+
+// ── Study Strategy & Exam Tips (dynamic, days-aware) ──────────────────────
+
+function populateStudyStrategyAndTips(diffDays) {
+  _renderStudyStrategy(diffDays);
+  _renderExamTips(diffDays);
+}
+
+/* ── helpers ── */
+function _tipItem(icon, title, body) {
+  return `<div style="display:flex;gap:11px;margin-bottom:14px;align-items:flex-start">
+    <div style="width:28px;height:28px;background:rgba(201,168,76,0.12);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;margin-top:1px">${icon}</div>
+    <div>
+      <div style="font-size:0.87rem;font-weight:600;color:rgba(255,255,255,0.92);margin-bottom:3px">${title}</div>
+      <div style="font-size:0.81rem;color:rgba(255,255,255,0.52);line-height:1.55">${body}</div>
+    </div>
+  </div>`;
+}
+function _actionItem(text) {
+  return `<div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:9px">
+    <div style="width:5px;height:5px;background:#C9A84C;border-radius:50%;flex-shrink:0;margin-top:7px"></div>
+    <div style="font-size:0.83rem;color:rgba(255,255,255,0.62);line-height:1.5">${text}</div>
+  </div>`;
+}
+function _phaseBanner(label, sublabel, color) {
+  color = color || '#C9A84C';
+  return `<div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+    <div style="width:8px;height:8px;background:${color};border-radius:50%;flex-shrink:0"></div>
+    <div>
+      <div style="font-size:0.78rem;font-weight:700;color:#C9A84C;text-transform:uppercase;letter-spacing:.06em">${label}</div>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);margin-top:2px">${sublabel}</div>
+    </div>
+  </div>`;
+}
+function _noDatePrompt(which) {
+  return `<p style="font-size:0.85rem;color:rgba(255,255,255,0.4);margin-bottom:10px">Set your exam date (above) to get a personalised ${which} tailored to how many days you have left.</p>
+  <div style="font-size:0.82rem;color:rgba(255,255,255,0.35)">Meanwhile, here's a general guide for first-time CFA Level I candidates.</div>`;
+}
+
+/* ── Study Strategy ── */
+function _renderStudyStrategy(diffDays) {
+  const el = document.getElementById('studyStrategyContent');
+  if (!el) return;
+
+  let html = '';
+
+  if (diffDays === null || diffDays === undefined || isNaN(diffDays)) {
+    /* No exam date set — show evergreen defaults */
+    html += _noDatePrompt('study strategy');
+    html += _phaseBanner('Suggested Starting Phase', 'Foundation → Structured Learning → Practice');
+    html += _actionItem('Start with Quantitative Methods and Ethics — they underpin every other topic.');
+    html += _actionItem('Use the Chapter Summaries in this dashboard to get a grip on each topic before drilling questions.');
+    html += _actionItem('Aim for at least 30 practice questions a day to build momentum.');
+    html += _actionItem('Track your accuracy by topic and focus extra time wherever you fall below 60%.');
+
+  } else if (diffDays > 180) {
+    html += _phaseBanner('Foundation Phase', `${diffDays} days left — build strong habits now`, '#4CAF50');
+    html += _actionItem('You have an excellent runway. Prioritise depth over speed.');
+    html += _actionItem('Complete all Chapter Summaries for at least two topic areas before drilling heavily.');
+    html += _actionItem('Start with QM and FSA — understanding these well accelerates every topic that follows.');
+    html += _actionItem('Set a daily target: even 20–30 questions/day compounds into thousands by exam day.');
+    html += _actionItem('Don\'t skip Ethics. Most candidates underweight it and lose easy marks.');
+
+  } else if (diffDays > 120) {
+    html += _phaseBanner('Curriculum Mapping Phase', `${diffDays} days left — systematic topic-by-topic coverage`);
+    html += _actionItem('Work through topics in order: QM → Economics → FSA → Corporate Finance → Equity → FI → Derivatives → Alternative Investments → Portfolio Management → Ethics.');
+    html += _actionItem('Complete each chapter\'s summary and then drill 50+ practice questions on it before moving on.');
+    html += _actionItem('Keep a formula log — write out every new formula by hand. This dramatically improves retention.');
+    html += _actionItem('Target 50+ questions/day. Focus on breadth — you want exposure to all 10 topics.');
+
+  } else if (diffDays > 90) {
+    html += _phaseBanner('Core Building Phase', `${diffDays} days left — go deep on the high-weight topics`);
+    html += _actionItem('FSA, Fixed Income and Equity together account for ~45% of the exam. Give them disproportionate time.');
+    html += _actionItem('Run timed mini-sessions of 18 questions (36 minutes) to simulate the actual exam pace of 2 min/question.');
+    html += _actionItem('Review every wrong answer immediately — do not move on without understanding why you got it wrong.');
+    html += _actionItem('Start revisiting QM and Economics: candidates who ignore them in this phase regret it later.');
+    html += _actionItem('Use Mastery Mode (in this platform) for topics where your accuracy is below 65%.');
+
+  } else if (diffDays > 50) {
+    html += _phaseBanner('Intensive Practice Phase', `${diffDays} days left — volume and accuracy`);
+    html += _actionItem('Shift from reading to doing: 70% of your study time should now be active practice.');
+    html += _actionItem('Complete the Daily Challenge every day without fail. These adaptive questions hit your weakest spots.');
+    html += _actionItem('Target 80–100 questions/day. Your accuracy should be climbing above 65% in well-studied topics.');
+    html += _actionItem('Work through your bookmarked questions weekly — they represent your personal error log.');
+    html += _actionItem('For Ethics: practice the Standards application questions repeatedly. These are rule-based and learnable.');
+
+  } else if (diffDays > 30) {
+    html += _phaseBanner('Revision Phase', `${diffDays} days left — sharpen and consolidate`);
+    html += _actionItem('Stop introducing new material. All energy now goes to revision and refinement.');
+    html += _actionItem('Revisit your weakest topic areas first. Use Focus Areas Summary (above) to guide your time.');
+    html += _actionItem('Do one full mock exam (180 questions, 4.5 hours) under strict exam conditions. Analyse the results.');
+    html += _actionItem('Revise formula sheets for QM, FI and FSA — these are the most formula-intensive topics on the exam.');
+    html += _actionItem('Ensure you can do basic FSA ratio computations, bond pricing, and NPV/IRR calculations quickly.');
+
+  } else if (diffDays > 14) {
+    html += _phaseBanner('Mock & Error Review Phase', `${diffDays} days left — simulate and refine`, '#FF9800');
+    html += _actionItem('Run a minimum of two full mocks. Treat each one as the real exam: no pauses, no looking up.');
+    html += _actionItem('After each mock, categorise every wrong answer: was it a knowledge gap, a careless error, or a time-pressure mistake?');
+    html += _actionItem('Do targeted 30–40 question drills on your three weakest topics every morning.');
+    html += _actionItem('Review Ethics Standards once more end-to-end — many candidates neglect it and lose 5–8 marks here.');
+    html += _actionItem('Reduce new practice volume; increase review depth. Quality over quantity now.');
+
+  } else if (diffDays > 7) {
+    html += _phaseBanner('Final Sprint', `${diffDays} days left — consolidate, don't cram`, '#FF7043');
+    html += _actionItem('No new topics. Focus only on reinforcing what you already know.');
+    html += _actionItem('Review your formula sheet daily — read it aloud or write it out from memory.');
+    html += _actionItem('Drill your bookmarked questions — these are your personal weak spots and deserve one last review.');
+    html += _actionItem('Keep sessions short (30–40 min) and focused. Mental fatigue management matters now.');
+    html += _actionItem('Sleep at least 7–8 hours. Memory consolidation happens during sleep.');
+
+  } else if (diffDays > 0) {
+    html += _phaseBanner('Exam Week', `${diffDays} day${diffDays === 1 ? '' : 's'} to go — trust your preparation`, '#EF5350');
+    html += _actionItem('Do NOT attempt new questions or mock exams this close to the exam. You risk anxiety, not growth.');
+    html += _actionItem('Spend 30 minutes each morning scanning formula sheets and high-yield summaries only.');
+    html += _actionItem('Confirm your test centre, travel logistics, and what you\'re bringing (passport/ID, calculator, pencils).');
+    html += _actionItem('The HP12C or BA II Plus are the only calculators permitted — make sure yours is allowed and charged.');
+    html += _actionItem('Your preparation is already done. Confidence and calmness are now your edge.');
+
+  } else {
+    html += _phaseBanner('Exam Day', 'You\'ve done the work. Now execute.', '#EF5350');
+    html += _actionItem('Arrive at the test centre 30–45 minutes early. Avoid rushing — it triggers cortisol spikes.');
+    html += _actionItem('The CFA exam has two 135-minute sessions of 90 questions each. Pace at 1.5 minutes per question.');
+    html += _actionItem('If stuck on a question, mark it and move on. Never let one question derail your timing.');
+    html += _actionItem('You got this. Every question you drilled in this platform prepared you for this moment.');
+  }
+
+  el.innerHTML = html;
+}
+
+/* ── Exam Tips ── */
+function _renderExamTips(diffDays) {
+  const el = document.getElementById('examTipsContent');
+  if (!el) return;
+
+  let html = '';
+
+  if (diffDays === null || diffDays === undefined || isNaN(diffDays)) {
+    html += _noDatePrompt('exam tips');
+    html += _tipItem('📋', 'Know the Exam Format', 'CFA Level I is a computer-based exam with two 135-minute sessions, each containing 90 questions. All questions are multiple choice with three options. There is no negative marking.');
+    html += _tipItem('⚖️', 'Understand Topic Weights', 'FSA (~13–17%), Ethics (~15–20%), and Fixed Income (~11–14%) together make up nearly half the exam. Don\'t treat all topics equally.');
+    html += _tipItem('🧠', 'Active Recall Beats Re-reading', 'Doing practice questions is far more effective than re-reading notes. Every session here moves the needle more than passive review.');
+
+  } else if (diffDays > 50) {
+    /* Broad — big-picture orientation */
+    html += `<p style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-bottom:16px">General exam awareness — revisit this section as your exam gets closer for increasingly specific advice.</p>`;
+    html += _tipItem('📋', 'Know the Format Cold', 'Two 135-minute sessions, 90 questions each, three-option MCQ throughout. No negative marking — always answer every question, even if guessing.');
+    html += _tipItem('⚖️', 'Respect the Topic Weights', 'Ethics + FSA + FI = roughly 40–50% of the exam. Candidates who underweight these three typically fail. Build your study plan around them.');
+    html += _tipItem('🧮', 'Calculator Proficiency Matters', 'Only the HP 12C or BA II Plus is permitted. Learn to use N, I/Y, PV, PMT, FV functions fast. Slow calculator work kills time in the exam.');
+    html += _tipItem('🎯', 'Practice Beats Passive Review', 'Every hour of active practice (answering questions) is worth three hours of re-reading. Start doing more than reading now.');
+
+  } else if (diffDays > 20) {
+    /* Moderate — tactical depth */
+    html += `<p style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-bottom:16px">You're in the critical build-up window. These tips are targeted at the 20–50 day phase.</p>`;
+    html += _tipItem('⏱️', 'Master the 2-Minute Rule', 'You have 135 minutes for 90 questions — exactly 1 minute 30 seconds per question. Mark difficult ones and return. Never spend 5 minutes on one question in the first pass.');
+    html += _tipItem('⚖️', 'Allocate Study Time by Marks', 'Ethics (15–20%) and FSA (13–17%) have the highest weights. If you\'re pressed for time, going deep on these two gives the best return per hour invested.');
+    html += _tipItem('🚫', 'No Negative Marking — Always Answer', 'There is zero penalty for wrong answers. Never leave a question blank. Eliminate one option and guess between two if unsure — you\'re at 50% with a single elimination.');
+    html += _tipItem('📐', 'Formulas Are Non-Negotiable', 'Duration, convexity, WACC, DDM, P/E decomposition, DuPont, Sharpe ratio — these come up every cycle. Drill them until they\'re automatic.');
+    html += _tipItem('🗂️', 'Build an Error Log', 'Every wrong answer on practice has a reason: knowledge gap, misread question, or rushed calculation. Track your patterns and you\'ll see the same types repeat.');
+
+  } else if (diffDays > 7) {
+    /* Detailed — pre-exam crunch */
+    html += `<p style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-bottom:16px">Under 3 weeks out. These tips are specific to exam execution and the final revision sprint.</p>`;
+    html += _tipItem('⏱️', 'Pace at 1.5 Min Per Question', 'In a 90-question session you have exactly 135 minutes. At the 45-minute mark you should have completed ~30 questions. At 90 minutes, ~60. Practise this pacing in your remaining mocks.');
+    html += _tipItem('🔄', 'Two-Pass Strategy', 'First pass: answer every question you\'re confident about quickly (skip, mark flagged ones). Second pass: return to flagged questions with remaining time. Never leave anything blank.');
+    html += _tipItem('🚫', 'Eliminate Before You Guess', 'On any uncertain question, rule out the most obviously wrong option first. Then reason between two — you immediately move from 33% to 50% probability.');
+    html += _tipItem('📐', 'Formula Sheet Review Daily', 'Spend 10 minutes each morning scanning your key formula list. FI (YTM, duration, convexity), FSA (DuPont, ratios), QM (TVM, NPV, expected value) — these 20 formulas cover ~30% of the exam.');
+    html += _tipItem('🧠', 'Ethics: Apply the Standards, Don\'t Memorise', 'Ethics questions test your ability to apply the Code & Standards to scenarios. Read the vignette carefully, identify which standard is at issue, and eliminate wrong answers by process of exclusion.');
+    html += _tipItem('😴', 'Sleep Is Part of Your Strategy', 'Memory consolidation happens during deep sleep. 7–8 hours in the final 10 days is as important as any study session. Fatigue cuts accuracy by 10–15%.');
+    html += _tipItem('🏃', 'Simulate Exam Conditions', 'Take at least one full 90-question mock starting at the same time as your actual exam session. Your brain performs better in familiar conditions.');
+
+  } else if (diffDays > 0) {
+    /* Exam week — very specific */
+    html += `<p style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-bottom:16px">Exam week. Execution mode. These are the tips that matter right now.</p>`;
+    html += _tipItem('📍', 'Confirm Logistics Tonight', 'Test centre address, travel time, arrival plan. Aim to arrive 30–45 minutes early. Unexpected delays compound into anxiety that hurts your score.');
+    html += _tipItem('🪪', 'Bring Required ID', 'Your passport or government-issued photo ID is mandatory. Confirm with CFAI which documents are accepted. No ID = no exam.');
+    html += _tipItem('🧮', 'Charge Your Calculator', 'Ensure your HP 12C or BA II Plus has fresh batteries or is fully charged. Bring a spare if possible. Test all financial functions tonight.');
+    html += _tipItem('🍽️', 'Eat a Proper Breakfast', 'A light, protein-rich meal before the exam stabilises blood glucose and reduces mid-exam energy dips. Avoid anything heavy or unfamiliar.');
+    html += _tipItem('🚫', 'No New Material Today', 'No new questions, no new chapters, no mock exams today. You cannot cram the CFA in 24 hours but you can wreck your confidence trying to. Short formula review only.');
+    html += _tipItem('🧘', 'Trust Your Preparation', 'Every question you drilled in this platform, every session you completed, every chapter summary you reviewed — it\'s already in your memory. Your only job now is to retrieve it calmly.');
+
+  } else {
+    html += `<p style="font-size:0.82rem;color:rgba(255,255,255,0.4);margin-bottom:16px">It's exam day. Here's your game plan.</p>`;
+    html += _tipItem('⏱️', 'Pace: 1.5 Minutes Per Question', 'You have 135 minutes for 90 questions. At 45 min, check you\'re near Q30. At 90 min, near Q60. If behind, move faster — never linger on one question.');
+    html += _tipItem('🔄', 'First Pass, Second Pass', 'Answer the ones you know. Flag uncertain ones. Come back in the second pass. Never leave any unanswered — blind guess if needed since there\'s no penalty.');
+    html += _tipItem('🧘', 'Stay Calm if You Hit a Hard Stretch', 'A cluster of difficult questions in a row is normal — exams are designed this way. Don\'t let it unsettle you. Mark and move on.');
+    html += _tipItem('✅', 'You\'ve Prepared Well', 'Take a breath. Trust your work. Go get your charter.');
+  }
+
+  el.innerHTML = html;
 }
 
 // ══════════════════════════════════════════════════════════
